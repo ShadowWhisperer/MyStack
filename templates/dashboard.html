@@ -1,0 +1,592 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - MyStack{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    
+    <!-- Overall Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-label">Cost Basis</div>
+            <div class="stat-value">${{ overall_stats.cost_basis|trim_zeros }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Current Value</div>
+            <div class="stat-value">${{ overall_stats.current_value|trim_zeros }}</div>
+        </div>
+        <div class="stat-card {% if overall_stats.gain_loss >= 0 %}positive{% else %}negative{% endif %}">
+            <div class="stat-label">Gain/Loss</div>
+            <div class="stat-value">${{ overall_stats.gain_loss|trim_zeros }}</div>
+        </div>
+        <div class="stat-card {% if overall_stats.gain_loss_percent >= 0 %}positive{% else %}negative{% endif %}">
+            <div class="stat-label">Gain/Loss %</div>
+            <div class="stat-value">{{ overall_stats.gain_loss_percent|trim_zeros }}%</div>
+        </div>
+    </div>
+    
+    <!-- Gold vs Silver Charts -->
+    <div class="charts-section">
+        <div class="chart-card">
+            <h3 class="chart-title">Portfolio Value</h3>
+            <canvas id="valueChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3 class="chart-title">Metal Value</h3>
+            <canvas id="metalsValueChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Category & Top Worth Section -->
+    <div class="charts-section">
+        <div class="chart-card">
+            <canvas id="categoryDonutChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="top-worth-grid">
+                <div class="top-worth-column">
+                    <h4 class="top-worth-title">Top Coins</h4>
+                    <div class="top-worth-list">
+                        {% for coin in top_coins %}
+                        <div class="top-worth-item">
+                            <span class="item-rank">{{ loop.index }}.</span>
+                            <span class="item-name">{{ coin.country }} {{ coin.denomination }}</span>
+                            <span class="item-value">${{ coin.worth|trim_zeros }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="top-worth-column">
+                    <h4 class="top-worth-title">Top Goldbacks</h4>
+                    <div class="top-worth-list">
+                        {% for goldback in top_goldbacks %}
+                        <div class="top-worth-item">
+                            <span class="item-rank">{{ loop.index }}.</span>
+                            <span class="item-name">{{ goldback.state }} {{ goldback.denomination|int }}</span>
+                            <span class="item-value">${{ goldback.worth|int }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Category Breakdown -->
+    <div class="category-grid">
+        {% for category in categories %}
+        <div class="category-card">
+            <div class="category-header">
+                <h3>
+                    {{ category.name }}
+                    {% if category.total_oz is defined %}
+                        <span style="font-weight: 400; font-size: 16px;">({{ category.total_oz|trim_zeros }} oz)</span>
+                    {% endif %}
+                </h3>
+                <span class="category-count">{{ category.count }} items</span>
+            </div>
+            <div class="category-stats">
+                {% if category.gb_total is defined %}
+                <div class="category-stat-row">
+                    <span class="category-stat-label">GB Total:</span>
+                    <span class="category-stat-value">{{ category.gb_total|trim_zeros }}</span>
+                </div>
+                {% endif %}
+                {% if category.gold_oz is defined %}
+                <div class="category-stat-row">
+                    <span class="category-stat-label">Gold:</span>
+                    <span class="category-stat-value">{{ category.gold_oz|trim_zeros }} oz</span>
+                </div>
+                <div class="category-stat-row">
+                    <span class="category-stat-label">Silver:</span>
+                    <span class="category-stat-value">{{ category.silver_oz|trim_zeros }} oz</span>
+                </div>
+                {% endif %}
+                <div class="category-stat-row">
+                    <span class="category-stat-label">Cost Basis:</span>
+                    <span class="category-stat-value">${{ category.cost|trim_zeros }}</span>
+                </div>
+                <div class="category-stat-row">
+                    <span class="category-stat-label">Current Value:</span>
+                    <span class="category-stat-value">${{ category.value|trim_zeros }}</span>
+                </div>
+                <div class="category-stat-row {% if category.gain >= 0 %}positive{% else %}negative{% endif %}">
+                    <span class="category-stat-label">Gain/Loss:</span>
+                    <span class="category-stat-value">${{ category.gain|trim_zeros }} ({{ category.gain_percent|format_percent }}%)</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.charts-section {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.chart-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    padding: 8px 12px 6px 12px;
+}
+
+.chart-card:has(canvas#categoryDonutChart) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+}
+
+#categoryDonutChart {
+    max-width: 90%;
+}
+
+.chart-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+    text-align: center;
+}
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.category-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+    padding: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.category-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.category-header h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.category-count {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.category-stats {
+    margin-bottom: 0;
+}
+
+.category-stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 13px;
+}
+
+.category-stat-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.category-stat-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.category-stat-row.positive .category-stat-value {
+    color: var(--success-color);
+}
+
+.category-stat-row.negative .category-stat-value {
+    color: var(--danger-color);
+}
+
+.category-link {
+    display: inline-block;
+    color: var(--accent-bright);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    margin-top: 12px;
+    transition: transform 0.2s ease;
+}
+
+.category-link:hover {
+    transform: translateX(4px);
+    color: var(--accent-color);
+}
+
+/* Top Worth Lists */
+.top-worth-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+}
+
+.top-worth-column {
+    min-width: 0;
+    position: relative;
+}
+
+.top-worth-column:first-child::after {
+    content: '';
+    position: absolute;
+    right: -16px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: #e0e0e0;
+}
+
+.top-worth-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 6px 0;
+    padding: 0 8px;
+    text-align: center;
+}
+
+.top-worth-list {
+    padding: 4px 8px;
+}
+
+.top-worth-item {
+    display: flex;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 13px;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.top-worth-item:last-child {
+    border-bottom: none;
+}
+
+.item-rank {
+    color: var(--text-secondary);
+    font-weight: 600;
+    min-width: 28px;
+    flex-shrink: 0;
+}
+
+.item-name {
+    color: var(--text-primary);
+    font-weight: 500;
+    padding: 0 12px 0 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.item-value {
+    color: var(--text-primary);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    min-width: 85px;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Get data from Flask
+const goldValue = {{ metal_breakdown.gold_value }};
+const silverValue = {{ metal_breakdown.silver_value }};
+const goldOz = {{ metal_breakdown.gold_oz }};
+const silverOz = {{ metal_breakdown.silver_oz }};
+const goldValueMetalsOnly = {{ metal_breakdown.gold_value_metals_only }};
+const silverValueMetalsOnly = {{ metal_breakdown.silver_value_metals_only }};
+const goldOzMetalsOnly = {{ metal_breakdown.gold_oz_metals_only }};
+const silverOzMetalsOnly = {{ metal_breakdown.silver_oz_metals_only }};
+
+// Colors
+const goldColor = '#FFD700';
+const silverColor = '#BFC1C2';
+
+// Calculate max values - round up to nearest increment for clean display, add tiny buffer for visual fill
+const maxValuePortfolio = Math.ceil((goldValue + silverValue) / 500) * 500 * 1.001;
+const maxOzPortfolio = Math.ceil((goldOz + silverOz) / 5) * 5 * 1.001;
+const maxValueMetals = Math.ceil((goldValueMetalsOnly + silverValueMetalsOnly) / 250) * 250 * 1.001;
+const maxOzMetals = Math.ceil((goldOzMetalsOnly + silverOzMetalsOnly) / 5) * 5 * 1.001;
+
+// Chart.js configuration for horizontal stacked bar (even smaller height)
+const chartConfig = {
+    type: 'bar',
+    options: {
+        indexAxis: 'y', // This makes it horizontal
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 12, // Changed from 6 to 12 for half the height again
+        plugins: {
+            legend: {
+                display: false // Remove legend
+            },
+            tooltip: {
+                displayColors: false,  // Remove colored squares
+                callbacks: {
+                    title: function() {
+                        return ''; // Remove title (was showing "Worth" or "Ounces")
+                    },
+                    label: function(context) {
+                        const label = context.dataset.label || '';
+                        const value = context.parsed.x;
+                        const total = context.chart.data.datasets.reduce((sum, dataset) => {
+                            return sum + dataset.data[context.dataIndex];
+                        }, 0);
+                        const percentage = total > 0 ? ((value / total) * 100) : 0;
+                        
+                        // Only show percentage if it's at least 0.5% (otherwise shows as "100%" when one is tiny)
+                        const percentageText = percentage >= 0.5 ? ` (${percentage.toFixed(1)}%)` : '';
+                        
+                        if (context.chart.canvas.id.includes('Value')) {
+                            return `${label}: $${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${percentageText}`;
+                        } else {
+                            return `${label}: ${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${percentageText}`;
+                        }
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                stacked: true,
+                grid: {
+                    display: false, // Remove vertical grid lines
+                    drawBorder: false // Remove horizontal line between chart and numbers
+                },
+                border: {
+                    display: false // Remove border line
+                },
+                ticks: {
+                    font: {
+                        size: 11
+                    }
+                }
+            },
+            y: {
+                stacked: true,
+                display: false, // This removes the Y-axis labels ("Worth", "Ounces")
+                grid: {
+                    display: false
+                }
+            }
+        }
+    }
+};
+
+// Full Portfolio Value Chart
+const valueCtx = document.getElementById('valueChart').getContext('2d');
+new Chart(valueCtx, {
+    ...chartConfig,
+    data: {
+        labels: [''],
+        datasets: [
+            {
+                label: 'Gold',
+                data: [goldValue],
+                backgroundColor: goldColor,
+                borderWidth: 0,
+                borderRadius: 6
+            },
+            {
+                label: 'Silver',
+                data: [silverValue],
+                backgroundColor: silverColor,
+                borderWidth: 0,
+                borderRadius: 6
+            }
+        ]
+    },
+    options: {
+        ...chartConfig.options,
+        scales: {
+            ...chartConfig.options.scales,
+            x: {
+                ...chartConfig.options.scales.x,
+                max: maxValuePortfolio,
+                ticks: {
+                    stepSize: 500,
+                    callback: function(value) {
+                        if (value % 500 === 0) {
+                            return value.toLocaleString();
+                        }
+                        return '';
+                    },
+                    font: {
+                        size: 11
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Metals Only Value Chart
+const metalsValueCtx = document.getElementById('metalsValueChart').getContext('2d');
+new Chart(metalsValueCtx, {
+    ...chartConfig,
+    data: {
+        labels: [''],
+        datasets: [
+            {
+                label: 'Gold',
+                data: [goldValueMetalsOnly],
+                backgroundColor: goldColor,
+                borderWidth: 0,
+                borderRadius: 6
+            },
+            {
+                label: 'Silver',
+                data: [silverValueMetalsOnly],
+                backgroundColor: silverColor,
+                borderWidth: 0,
+                borderRadius: 6
+            }
+        ]
+    },
+    options: {
+        ...chartConfig.options,
+        scales: {
+            ...chartConfig.options.scales,
+            x: {
+                ...chartConfig.options.scales.x,
+                max: maxValueMetals,
+                ticks: {
+                    stepSize: 250,
+                    callback: function(value) {
+                        if (value % 250 === 0) {
+                            return value.toLocaleString();
+                        }
+                        return '';
+                    },
+                    font: {
+                        size: 11
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Category Breakdown Donut Chart
+const categoryDonutCtx = document.getElementById('categoryDonutChart').getContext('2d');
+
+// Extract category values
+const categoryLabels = [];
+const categoryValues = [];
+const categoryColors = {
+    'Metals': '#BFC1C2',      // Silver
+    'Coins': '#8B4513',        // Brown
+    'Goldbacks': '#d4af37'     // Goldback gold
+};
+const categoryBackgrounds = [];
+
+{% for category in categories %}
+{% if category.name == 'Goldbacks' %}
+categoryLabels.push('GBs');
+{% else %}
+categoryLabels.push('{{ category.name }}');
+{% endif %}
+categoryValues.push({{ category.value }});
+categoryBackgrounds.push(categoryColors['{{ category.name }}'] || '#95a5a6');
+{% endfor %}
+
+new Chart(categoryDonutCtx, {
+    type: 'doughnut',
+    data: {
+        labels: categoryLabels,
+        datasets: [{
+            data: categoryValues,
+            backgroundColor: categoryBackgrounds,
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2.5,
+        plugins: {
+            legend: {
+                display: false  // Remove legend
+            },
+            tooltip: {
+                displayColors: false,  // Remove colored squares
+                callbacks: {
+                    title: function() {
+                        return '';  // Remove title from tooltip
+                    },
+                    label: function(context) {
+                        const value = context.parsed;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `$${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${percentage}%)`;
+                    }
+                }
+            },
+            datalabels: {
+                color: '#fff',
+                font: {
+                    weight: 'bold',
+                    size: 14
+                },
+                formatter: function(value, context) {
+                    return context.chart.data.labels[context.dataIndex];
+                }
+            }
+        }
+    },
+    plugins: [{
+        id: 'centerLabels',
+        afterDatasetsDraw: function(chart) {
+            const ctx = chart.ctx;
+            const chartArea = chart.chartArea;
+            const meta = chart.getDatasetMeta(0);
+            
+            meta.data.forEach((arc, index) => {
+                const centerAngle = (arc.startAngle + arc.endAngle) / 2;
+                const radius = (arc.innerRadius + arc.outerRadius) / 2;
+                const x = chartArea.left + chartArea.width / 2 + Math.cos(centerAngle) * radius;
+                const y = chartArea.top + chartArea.height / 2 + Math.sin(centerAngle) * radius;
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(chart.data.labels[index], x, y);
+            });
+        }
+    }]
+});
+
+</script>
+{% endblock %}
