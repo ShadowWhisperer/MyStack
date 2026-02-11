@@ -11,5 +11,6 @@ Metal prices are update at first launch and then ever 30 minutes. Manual refresh
 - Metal prices from Yahoo
 
 ## Links
-Goldback: https://www.goldback.com/
-Numista: https://en.numista.com/
+Goldback: https://www.goldback.com/  
+Numista: https://en.numista.com/  
+DefyTheGrid: https://defythegrid.com/  
