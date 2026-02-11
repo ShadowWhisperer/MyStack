@@ -9,7 +9,22 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - FLASK_ENV=production
+      - TZ=America/Chicago
     volumes:
       - ./data:/app/data
       - ./static/images:/app/static/images
     restart: unless-stopped
+#    mem_limit: 512m
+    cpus: "1.0"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    user: 1000:1000
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "3"
