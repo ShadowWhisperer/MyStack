@@ -1,0 +1,15 @@
+services:
+  mystack:
+    image: ghcr.io/ShadowWhisperer/MyStack:latest
+    container_name: mystack
+    ports:
+      - "5002:5000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - FLASK_ENV=production
+    volumes:
+      - ./data:/app/data
+      - ./static/images:/app/static/images
+    restart: unless-stopped

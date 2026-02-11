@@ -1,0 +1,40 @@
+# Environment variables
+.env
+
+# Database
+*.db
+*.db-journal
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Images (user data)
+static/images/metals/*
+static/images/coins/*
+static/images/goldbacks/*
+!static/images/metals/.gitkeep
+!static/images/coins/.gitkeep
+!static/images/goldbacks/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
