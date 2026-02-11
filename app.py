@@ -25,7 +25,7 @@ ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'changeme')
 basedir = os.path.abspath(os.path.dirname(__file__))
 data_dir = os.path.join(basedir, 'data')
 os.makedirs(data_dir, exist_ok=True)
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(data_dir, "precious_metals.db")}'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(data_dir, "database.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # File upload configuration
