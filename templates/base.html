@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MyStack{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .widget-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+        }
+        .refresh-btn {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            opacity: 0.7;
+            transition: opacity 0.2s, transform 0.3s;
+        }
+        .refresh-btn:hover {
+            opacity: 1;
+        }
+        .refresh-btn.spinning {
+            animation: spin 0.6s linear;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard') }}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <span class="nav-label">Dashboard</span>
+                </a>
+                <a href="{{ url_for('coins') }}" class="nav-item {% if active_page == 'coins' %}active{% endif %}">
+                    <span class="nav-label">Coins</span>
+                </a>
+                <a href="{{ url_for('goldbacks') }}" class="nav-item {% if active_page == 'goldbacks' %}active{% endif %}">
+                    <span class="nav-label">Goldbacks</span>
+                </a>
+                <a href="{{ url_for('metals') }}" class="nav-item {% if active_page == 'metals' %}active{% endif %}">
+                    <span class="nav-label">Metals</span>
+                </a>
+                <a href="{{ url_for('logout') }}" class="nav-item" style="margin-top: auto; color: #e74c3c;">
+                    <span class="nav-label">🚪 Logout</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-widgets">
+                <!-- Metal Prices Widget -->
+                <div class="widget metal-prices-widget">
+                    <div class="widget-header">
+                        <span id="widgetTimestamp">--:--:--</span>
+                        <button id="refreshPrices" class="refresh-btn" title="Refresh prices">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="widget-content" id="metalPrices">
+                        <div class="price-item">
+                            <span class="metal-name">Gold</span>
+                            <span class="metal-price" id="goldPrice">Loading...</span>
+                        </div>
+                        <div class="price-item">
+                            <span class="metal-name">Silver</span>
+                            <span class="metal-price" id="silverPrice">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Goldback Rate Widget -->
+                <div class="widget goldback-rate-widget">
+                    <div class="widget-content">
+                        <div class="gb-rate-item">
+                            <img src="{{ url_for('static', filename='images/gb_logo.png') }}" alt="Goldback" class="gb-widget-logo">
+                            <span class="gb-rate-value" id="goldbackRate">$--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
