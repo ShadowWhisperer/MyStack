@@ -1,6 +1,6 @@
 services:
   mystack:
-    image: ghcr.io/ShadowWhisperer/MyStack:latest
+    image: ghcr.io/shadowwhisperer/mystack:latest
     container_name: mystack
     ports:
       - "5002:5000"
