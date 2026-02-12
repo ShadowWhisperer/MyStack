@@ -9,7 +9,7 @@
 - Breakdown of metals by oz and worth
 - High value items
 - Tag an image to the item. See a preview or click for full resolution
-- Single database file
+- Single database file (Images stored seperatly)
 
 ## Dashboard
 <img width="1920" height="919" alt="Dashboard" src="https://github.com/user-attachments/assets/e8460dd8-4264-40fe-9489-48befd13c227" />
