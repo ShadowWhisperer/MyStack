@@ -1,9 +1,31 @@
 🚨  BETA  🚨  
 
-Web application for tracking your precious metals, coins, and goldbacks.  
-Metal prices are update at first launch and then ever 30 minutes. Manual refresh is available.  
-  
-🚨  Do NOT connect this to your WAN. Designed for local access only.  
+### Features
+- 100% local (Other than getting Yahoo metal prices). All data entry is manual.
+- Manage: cost, value, when valued last, KM # with Links, and other specifics
+- Get live Gold, Silver, and Goldback prices. Updated every 30 minutes or manually.
+- Searchable tables
+- Live price calculations
+- Breakdown of metals by oz and worth
+- High value items
+- Tag an image to the item. See a preview or click for full resolution
+- Single database file
+
+## Dashboard
+<img width="1920" height="919" alt="Dashboard" src="https://github.com/user-attachments/assets/e8460dd8-4264-40fe-9489-48befd13c227" />
+
+## Coins
+<img width="1917" height="919" alt="Coins" src="https://github.com/user-attachments/assets/c948cb25-6ffc-429b-b8c6-dc25503be5a5" />
+
+## Image Preview
+<img width="1920" height="919" alt="Coins 2" src="https://github.com/user-attachments/assets/6a20cd63-4d5e-42e3-9dd3-f6be2d3f0e1b" />
+
+## Goldbacks
+<img width="1920" height="919" alt="Goldbacks" src="https://github.com/user-attachments/assets/25e5ea4c-62f6-4a98-aa09-7b87caf1df9c" />
+
+## Metals
+<img width="1919" height="919" alt="Metals" src="https://github.com/user-attachments/assets/d79eea3e-3e51-48ae-8bff-67aed1bcf5a8" />
+
 
 ## Credits  
 - Built with Claud.ai  
@@ -12,4 +34,5 @@ Metal prices are update at first launch and then ever 30 minutes. Manual refresh
 ## Links  
 Goldback: https://www.goldback.com/  
 Numista: https://en.numista.com/  
+Reputable Auctioneer with metal tester: https://klaassenrealty.hibid.com/  
 DefyTheGrid: https://defythegrid.com/  
