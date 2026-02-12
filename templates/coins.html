@@ -1,0 +1,671 @@
+{% extends "base.html" %}
+
+{% block title %}Coins{% endblock %}
+
+{% block content %}
+<style>
+    /* Tighter row height for Coins */
+    #metalsTable tbody tr {
+        height: 34px;
+    }
+    #metalsTable tbody td {
+        padding: 3px 10px;
+        font-size: 13px;
+    }
+    #metalsTable .image-col img {
+        max-height: 28px;
+    }
+    /* Smaller camera icon */
+    #metalsTable .camera-icon {
+        font-size: 14px;
+        padding: 3px;
+    }
+</style>
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-label">Cost Basis</div>
+            <div class="stat-value">${{ stats.cost_basis|trim_zeros }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Current Value</div>
+            <div class="stat-value">${{ stats.current_value|trim_zeros }}</div>
+        </div>
+        <div class="stat-card {% if stats.gain_loss >= 0 %}positive{% else %}negative{% endif %}">
+            <div class="stat-label">Gain/Loss</div>
+            <div class="stat-value">${{ stats.gain_loss|trim_zeros }}</div>
+        </div>
+        <div class="stat-card {% if stats.gain_loss_percent >= 0 %}positive{% else %}negative{% endif %}">
+            <div class="stat-label">Gain/Loss %</div>
+            <div class="stat-value">{{ stats.gain_loss_percent|trim_zeros }}%</div>
+        </div>
+    </div>
+    
+    <!-- Action Bar -->
+    <div class="action-bar">
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search..." class="search-input">
+        </div>
+        <div class="action-buttons">
+            <button id="addNewBtn" class="btn-icon btn-add" title="Add New Entry" style="display: none;">
+                <span class="icon">+</span>
+            </button>
+            <button id="editModeBtn" class="btn-icon" title="Toggle Edit Mode">
+                <span class="icon" id="editIcon">✏️</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Data Grid -->
+    <div class="data-grid-container">
+        <table class="data-grid" id="metalsTable">
+            <thead>
+                <tr>
+                    <th class="image-col">Image</th>
+                    <th data-sort="material">Material</th>
+                    <th data-sort="country">Country</th>
+                    <th data-sort="year">Year</th>
+                    <th data-sort="weight">Weight</th>
+                    <th data-sort="denomination">Denomination</th>
+                    <th data-sort="quantity">Quantity</th>
+                    <th data-sort="total_cost">Total Cost</th>
+                    <th data-sort="worth">Worth</th>
+                    <th data-sort="gain_loss">Gain/Loss</th>
+                    <th data-sort="worth_updated">Worth Updated</th>
+                    <th data-sort="km">KM</th>
+                    <th data-sort="notes">Notes</th>
+                    <th class="actions-col" style="display: none;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="coinsTableBody">
+                {% for coin in coins %}
+                <tr data-id="{{ coin.id }}" class="data-row">
+                    <td class="image-cell">
+                        {% if coin.image_filename %}
+                        <div class="image-icon-wrapper">
+                            <a href="{{ url_for('static', filename='images/' + coin.image_filename) }}" target="_blank" class="image-icon-link">
+                                <span class="camera-icon" data-row-id="{{ coin.id }}">📷</span>
+                            </a>
+                            <input type="file" class="image-upload-input" data-row-id="{{ coin.id }}" accept="image/*" style="display: none;">
+                            <img src="{{ url_for('static', filename='images/' + coin.image_filename) }}" 
+                                 alt="{{ coin.material }}" 
+                                 class="hover-preview">
+                        </div>
+                        {% else %}
+                        <span class="no-image">-</span>
+                        <div class="image-icon-wrapper" style="display: none;">
+                            <span class="camera-icon no-image-icon add-icon" data-row-id="{{ coin.id }}">+</span>
+                            <input type="file" class="image-upload-input" data-row-id="{{ coin.id }}" accept="image/*" style="display: none;">
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td class="editable" data-field="material">{{ coin.material or '-' }}</td>
+                    <td class="editable" data-field="country">{{ coin.country or '-' }}</td>
+                    <td class="editable" data-field="year">{{ coin.year or '-' }}</td>
+                    <td class="editable" data-field="weight">{{ coin.weight or '-' }}</td>
+                    <td class="editable" data-field="denomination">{{ coin.denomination or '-' }}</td>
+                    <td class="editable" data-field="quantity">{{ coin.quantity }}</td>
+                    <td class="editable" data-field="total_cost">{{ coin.total_cost|int if coin.total_cost == coin.total_cost|int else "%.2f"|format(coin.total_cost) }}</td>
+                    <td class="editable" data-field="worth">{{ coin.worth|int if coin.worth == coin.worth|int else "%.2f"|format(coin.worth) }}</td>
+                    <td class="{% if coin.gain_loss >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                        ${{ "%.2f"|format(coin.gain_loss) }}
+                    </td>
+                    <td class="editable" data-field="worth_updated">{{ coin.worth_updated or '-' }}</td>
+                    <td class="km-cell" data-field="km" data-km-url="{{ coin.km_url or '' }}">
+                        {% if coin.km %}
+                            {% if coin.km_url %}
+                            <a href="{{ coin.km_url }}" target="_blank" class="km-link">{{ coin.km }}</a>
+                            {% else %}
+                            <span class="km-text">{{ coin.km }}</span>
+                            {% endif %}
+                        {% else %}
+                        -
+                        {% endif %}
+                        <div class="km-edit-fields" style="display: none;">
+                            <input type="text" class="km-input" value="{{ coin.km or '' }}" placeholder="KM#">
+                            <input type="text" class="km-url-input" value="{{ coin.km_url or '' }}" placeholder="URL">
+                        </div>
+                    </td>
+                    <td class="editable" data-field="notes">{{ coin.notes or '-' }}</td>
+                    <td class="actions-cell">
+                        <button class="btn-delete" onclick="deleteRow({{ coin.id }})">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if not coins %}
+        <div class="empty-state">
+            <p>No coins added yet. Click "Add New" to get started.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add New Modal -->
+<div id="addNewModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-body">
+            <form id="addNewForm">
+                <div class="form-row single-row">
+                    <div class="form-group">
+                        <div class="file-upload-wrapper">
+                            <button type="button" class="btn-upload-image" onclick="document.getElementById('newImage').click()">Upload Image</button>
+                            <span id="fileNameDisplay" class="file-name-display">No file chosen</span>
+                            <input type="file" id="newImage" name="image" accept="image/*" style="display: none;" onchange="updateFileName(this)">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newMaterial">Material</label>
+                        <input type="text" id="newMaterial" name="material">
+                    </div>
+                    <div class="form-group">
+                        <label for="newCountry">Country</label>
+                        <input type="text" id="newCountry" name="country">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newYear">Year</label>
+                        <input type="text" id="newYear" name="year">
+                    </div>
+                    <div class="form-group">
+                        <label for="newWeight">Weight</label>
+                        <input type="text" id="newWeight" name="weight">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newDenomination">Denomination</label>
+                        <input type="text" id="newDenomination" name="denomination">
+                    </div>
+                    <div class="form-group">
+                        <label for="newQuantity">Quantity</label>
+                        <input type="number" id="newQuantity" name="quantity" value="1" min="1">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newTotalCost">Total Cost</label>
+                        <input type="number" id="newTotalCost" name="total_cost" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="newWorth">Worth</label>
+                        <input type="number" id="newWorth" name="worth" step="0.01" value="0">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newWorthUpdated">Worth Updated</label>
+                        <input type="text" id="newWorthUpdated" name="worth_updated">
+                    </div>
+                    <div class="form-group">
+                        <!-- Empty space for alignment -->
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newKM">KM #</label>
+                        <input type="text" id="newKM" name="km" placeholder="e.g., 131">
+                    </div>
+                    <div class="form-group">
+                        <label for="newKMUrl">KM URL</label>
+                        <input type="text" id="newKMUrl" name="km_url" placeholder="https://en.numista.com/...">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="newNotes">Notes</label>
+                        <textarea id="newNotes" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick="closeAddNewModal()">Cancel</button>
+            <button type="button" class="btn-save" onclick="saveNewEntry()">Add</button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let editMode = false;
+    let modifiedRows = new Set();
+    
+    // Toggle Edit Mode
+    document.getElementById('editModeBtn').addEventListener('click', function() {
+        editMode = !editMode;
+        const editIcon = document.getElementById('editIcon');
+        const addNewBtn = document.getElementById('addNewBtn');
+        const actionCells = document.querySelectorAll('.actions-cell');
+        const actionHeader = document.querySelector('.actions-col');
+        const editableCells = document.querySelectorAll('.editable');
+        const cameraIcons = document.querySelectorAll('.camera-icon');
+        
+        if (editMode) {
+            // Switch to edit mode (save icon)
+            editIcon.textContent = '💾';
+            this.title = 'Save All Changes';
+            addNewBtn.style.display = 'block';
+            
+            // Show action column and header
+            if (actionHeader) actionHeader.style.display = 'table-cell';
+            actionCells.forEach(cell => {
+                cell.style.display = 'table-cell';
+            });
+            
+            // Enable inline editing
+            editableCells.forEach(cell => {
+                cell.contentEditable = true;
+                cell.classList.add('editing');
+            });
+            
+            // For each image cell, show camera icon only if no image exists
+            document.querySelectorAll('.image-cell').forEach(cell => {
+                const hasImage = cell.querySelector('.image-icon-link'); // Has actual image
+                const dash = cell.querySelector('.no-image');
+                const wrapper = cell.querySelector('.image-icon-wrapper[style*="display: none"]');
+                
+                if (!hasImage && dash && wrapper) {
+                    // No image - show camera icon, hide dash
+                    dash.style.display = 'none';
+                    wrapper.style.display = 'inline-block';
+                }
+            });
+            
+            // Show KM edit fields, hide links and text
+            document.querySelectorAll('.km-cell').forEach(cell => {
+                const link = cell.querySelector('.km-link');
+                const kmText = cell.querySelector('.km-text');
+                const editFields = cell.querySelector('.km-edit-fields');
+                
+                // Hide link if exists
+                if (link) link.style.display = 'none';
+                
+                // Hide km-text span if exists
+                if (kmText) kmText.style.display = 'none';
+                
+                // Hide all text nodes (including "-")
+                Array.from(cell.childNodes).forEach(node => {
+                    if (node.nodeType === 3) { // Text node
+                        node.textContent = '';
+                    }
+                });
+                
+                // Show edit fields
+                if (editFields) {
+                    editFields.style.display = 'flex';
+                }
+            });
+            
+            // Make camera icons clickable for upload
+            cameraIcons.forEach(icon => {
+                icon.style.cursor = 'pointer';
+                icon.addEventListener('click', handleImageUploadClick);
+            });
+            
+        } else {
+            // Save all changes and exit edit mode
+            if (modifiedRows.size > 0) {
+                saveAllChanges();
+            }
+            
+            // Switch back to view mode (pencil icon)
+            editIcon.textContent = '✏️';
+            this.title = 'Toggle Edit Mode';
+            addNewBtn.style.display = 'none';
+            
+            // Hide action column and header
+            if (actionHeader) actionHeader.style.display = 'none';
+            actionCells.forEach(cell => {
+                cell.style.display = 'none';
+            });
+            
+            // Disable inline editing
+            editableCells.forEach(cell => {
+                cell.contentEditable = false;
+                cell.classList.remove('editing');
+            });
+            
+            // For each image cell, hide camera icon and show dash if no image
+            document.querySelectorAll('.image-cell').forEach(cell => {
+                const hasImage = cell.querySelector('.image-icon-link');
+                const dash = cell.querySelector('.no-image');
+                const wrapper = cell.querySelector('.image-icon-wrapper[style*="display: none"], .image-icon-wrapper[style*="inline-block"]');
+                
+                if (!hasImage && dash && wrapper) {
+                    // No image - show dash, hide camera icon
+                    dash.style.display = '';
+                    wrapper.style.display = 'none';
+                }
+            });
+            
+            // Hide KM edit fields, restore display
+            document.querySelectorAll('.km-cell').forEach(cell => {
+                const editFields = cell.querySelector('.km-edit-fields');
+                
+                // Hide edit fields
+                if (editFields) {
+                    editFields.style.display = 'none';
+                }
+                
+                // The page will reload after save, so we don't need to manually restore the display
+            });
+            
+            // Remove upload handlers from camera icons
+            cameraIcons.forEach(icon => {
+                icon.style.cursor = '';
+                icon.removeEventListener('click', handleImageUploadClick);
+            });
+        }
+        
+        this.classList.toggle('active');
+    });
+    
+    // Handle camera icon click in edit mode
+    function handleImageUploadClick(e) {
+        if (!editMode) return;
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const rowId = this.dataset.rowId;
+        const fileInput = document.querySelector(`.image-upload-input[data-row-id="${rowId}"]`);
+        if (fileInput) {
+            fileInput.click();
+        }
+    }
+    
+    // Handle file selection for existing rows
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('image-upload-input')) {
+            const rowId = e.target.dataset.rowId;
+            const file = e.target.files[0];
+            
+            if (file && editMode) {
+                uploadImageForRow(rowId, file);
+            }
+        }
+    });
+    
+    // Track cell modifications
+    document.getElementById('coinsTableBody').addEventListener('input', function(e) {
+        if (e.target.classList.contains('editable')) {
+            const row = e.target.closest('tr');
+            const rowId = row.dataset.id;
+            modifiedRows.add(rowId);
+            row.classList.add('modified');
+            
+            // Recalculate current value if metal, weight, or count changed
+            const field = e.target.dataset.field;
+            if (field === 'metal' || field === 'weight_oz' || field === 'count') {
+                recalculateRowValue(row);
+            }
+        }
+        
+        // Track KM field changes
+        if (e.target.classList.contains('km-input') || e.target.classList.contains('km-url-input')) {
+            const row = e.target.closest('tr');
+            const rowId = row.dataset.id;
+            modifiedRows.add(rowId);
+            row.classList.add('modified');
+        }
+    });
+    
+    // Recalculate current value for a row
+    function recalculateRowValue(row) {
+        const metal = row.querySelector('[data-field="metal"]').textContent.trim();
+        const weightOz = parseFloat(row.querySelector('[data-field="weight_oz"]').textContent.trim());
+        const count = parseInt(row.querySelector('[data-field="count"]').textContent.trim());
+        
+        if (metal && weightOz && count) {
+            const currentValue = calculateCurrentValue(metal, weightOz, count);
+            const currentValueCell = row.querySelector('[data-field="current_value"]');
+            if (currentValueCell && currentValue) {
+                currentValueCell.textContent = currentValue.toFixed(2);
+            }
+        }
+    }
+    
+    // Save all changes
+    function saveAllChanges() {
+        if (modifiedRows.size === 0) {
+            return;
+        }
+        
+        const promises = [];
+        
+        modifiedRows.forEach(rowId => {
+            const row = document.querySelector(`tr[data-id="${rowId}"]`);
+            
+            // Get KM values from edit inputs (safely handle if they don't exist)
+            const kmCell = row.querySelector('[data-field="km"]');
+            let kmValue = '';
+            let kmUrlValue = '';
+            
+            if (kmCell) {
+                const kmInput = kmCell.querySelector('.km-input');
+                const kmUrlInput = kmCell.querySelector('.km-url-input');
+                kmValue = kmInput ? kmInput.value.trim() : '';
+                kmUrlValue = kmUrlInput ? kmUrlInput.value.trim() : '';
+            }
+            
+            const data = {
+                material: row.querySelector('[data-field="material"]').textContent.trim(),
+                country: row.querySelector('[data-field="country"]').textContent.trim(),
+                year: row.querySelector('[data-field="year"]').textContent.trim(),
+                weight: row.querySelector('[data-field="weight"]').textContent.trim(),
+                denomination: row.querySelector('[data-field="denomination"]').textContent.trim(),
+                quantity: parseInt(row.querySelector('[data-field="quantity"]').textContent.trim()),
+                total_cost: parseFloat(row.querySelector('[data-field="total_cost"]').textContent.trim()),
+                worth: parseFloat(row.querySelector('[data-field="worth"]').textContent.trim()),
+                worth_updated: row.querySelector('[data-field="worth_updated"]').textContent.trim(),
+                km: kmValue,
+                km_url: kmUrlValue,
+                notes: row.querySelector('[data-field="notes"]').textContent.trim()
+            };
+            
+            // Replace '-' with empty string
+            if (data.material === '-') data.material = '';
+            if (data.country === '-') data.country = '';
+            if (data.year === '-') data.year = '';
+            if (data.weight === '-') data.weight = '';
+            if (data.denomination === '-') data.denomination = '';
+            if (data.worth_updated === '-') data.worth_updated = '';
+            if (data.notes === '-') data.notes = '';
+            
+            const promise = fetch(`/api/coins/${rowId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            promises.push(promise);
+        });
+        
+        Promise.all(promises)
+            .then(() => {
+                modifiedRows.clear();
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error saving changes:', error);
+                alert('Error saving changes. Please try again.');
+            });
+    }
+    
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#coinsTableBody tr');
+        
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+    });
+    
+    // Delete row function
+    function deleteRow(id) {
+        if (!confirm('Are you sure you want to delete this entry?')) {
+            return;
+        }
+        
+        fetch(`/api/coins/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting entry:', error);
+            alert('Error deleting entry. Please try again.');
+        });
+    }
+    
+    // Add New Modal Functions
+    document.getElementById('addNewBtn').addEventListener('click', function() {
+        document.getElementById('addNewModal').style.display = 'flex';
+    });
+    
+    function updateFileName(input) {
+        const display = document.getElementById('fileNameDisplay');
+        if (input.files && input.files[0]) {
+            display.textContent = input.files[0].name;
+        } else {
+            display.textContent = 'No file chosen';
+        }
+    }
+    
+    function closeAddNewModal() {
+        document.getElementById('addNewModal').style.display = 'none';
+        document.getElementById('addNewForm').reset();
+        // Reset submission flag
+        isSubmitting = false;
+        const saveButton = document.querySelector('.btn-save');
+        saveButton.textContent = 'Add';
+        saveButton.disabled = false;
+    }
+    
+    let isSubmitting = false;
+    
+    function saveNewEntry() {
+        if (isSubmitting) {
+            return;
+        }
+        
+        const form = document.getElementById('addNewForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        // Build FormData with coin fields
+        const formData = new FormData();
+        formData.append('material', document.getElementById('newMaterial').value);
+        formData.append('country', document.getElementById('newCountry').value);
+        formData.append('year', document.getElementById('newYear').value);
+        formData.append('weight', document.getElementById('newWeight').value);
+        formData.append('denomination', document.getElementById('newDenomination').value);
+        formData.append('quantity', parseInt(document.getElementById('newQuantity').value) || 1);
+        formData.append('total_cost', parseFloat(document.getElementById('newTotalCost').value) || 0);
+        formData.append('worth', parseFloat(document.getElementById('newWorth').value) || 0);
+        formData.append('worth_updated', document.getElementById('newWorthUpdated').value);
+        formData.append('km', document.getElementById('newKM').value);
+        formData.append('km_url', document.getElementById('newKMUrl').value);
+        formData.append('notes', document.getElementById('newNotes').value);
+        
+        const imageFile = document.getElementById('newImage').files[0];
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+        
+        isSubmitting = true;
+        const saveButton = document.querySelector('.btn-save');
+        saveButton.textContent = 'Adding...';
+        saveButton.disabled = true;
+        
+        fetch('/api/coins', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                closeAddNewModal();
+                window.location.href = window.location.pathname + '?edit=1';
+            } else {
+                alert('Error: ' + (result.error || 'Unknown error'));
+                isSubmitting = false;
+                saveButton.textContent = 'Add';
+                saveButton.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error adding entry.');
+            isSubmitting = false;
+            saveButton.textContent = 'Add';
+            saveButton.disabled = false;
+        });
+    }
+    
+    // Upload image for existing row
+    function uploadImageForRow(rowId, file) {
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        fetch(`/api/coins/${rowId}/image`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                // Reload but stay in edit mode
+                const url = new URL(window.location);
+                url.searchParams.set('edit', '1');
+                window.location.href = url.toString();
+            } else {
+                alert('Error uploading image: ' + (result.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error uploading image');
+        });
+    }
+    
+    // Hide actions column by default
+    document.addEventListener('DOMContentLoaded', function() {
+        const actionCells = document.querySelectorAll('.actions-cell');
+        actionCells.forEach(cell => {
+            cell.style.display = 'none';
+        });
+        
+        // Check if we should auto-enter edit mode
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('edit') === '1') {
+            // Trigger edit mode
+            document.getElementById('editModeBtn').click();
+            // Clean up URL
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    });
+</script>
+{% endblock %}
