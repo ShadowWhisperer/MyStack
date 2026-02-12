@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load metal prices
     updateMetalPrices();
     
-    // Update prices every 5 minutes on the frontend
+    // Update prices every 30 minutes on the frontend
     setInterval(updateMetalPrices, 300000);
     
     // Add refresh button handler
