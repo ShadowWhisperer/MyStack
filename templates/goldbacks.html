@@ -1,592 +1,593 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - MyStack{% endblock %}
+{% block title %}Goldbacks{% endblock %}
 
 {% block content %}
-<div class="page-container">
-    
-    <!-- Overall Stats Bar -->
-    <div class="stats-bar">
+<style>
+    /* Tighter row height for Goldbacks only */
+    #metalsTable tbody tr {
+        height: 34px;
+    }
+    #metalsTable tbody td {
+        padding: 3px 10px;
+        font-size: 13px;
+    }
+    #metalsTable .image-col img {
+        max-height: 28px;
+    }
+    /* Smaller camera icon */
+    #metalsTable .camera-icon {
+        font-size: 14px;
+        padding: 3px;
+    }
+</style>
+    <!-- Stats Bar -->
+    <div class="stats-bar stats-bar-5">
         <div class="stat-card">
             <div class="stat-label">Cost Basis</div>
-            <div class="stat-value">${{ overall_stats.cost_basis|trim_zeros }}</div>
+            <div class="stat-value">${{ stats.cost_basis|trim_zeros }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">GB Total</div>
+            <div class="stat-value">{{ stats.gb_total|trim_zeros }}</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Current Value</div>
-            <div class="stat-value">${{ overall_stats.current_value|trim_zeros }}</div>
+            <div class="stat-value">${{ stats.current_value|trim_zeros }}</div>
         </div>
-        <div class="stat-card {% if overall_stats.gain_loss >= 0 %}positive{% else %}negative{% endif %}">
+        <div class="stat-card {% if stats.gain_loss >= 0 %}positive{% else %}negative{% endif %}">
             <div class="stat-label">Gain/Loss</div>
-            <div class="stat-value">${{ overall_stats.gain_loss|trim_zeros }}</div>
+            <div class="stat-value">${{ stats.gain_loss|trim_zeros }}</div>
         </div>
-        <div class="stat-card {% if overall_stats.gain_loss_percent >= 0 %}positive{% else %}negative{% endif %}">
+        <div class="stat-card {% if stats.gain_loss_percent >= 0 %}positive{% else %}negative{% endif %}">
             <div class="stat-label">Gain/Loss %</div>
-            <div class="stat-value">{{ overall_stats.gain_loss_percent|trim_zeros }}%</div>
+            <div class="stat-value">{{ stats.gain_loss_percent|trim_zeros }}%</div>
         </div>
     </div>
     
-    <!-- Gold vs Silver Charts -->
-    <div class="charts-section">
-        <div class="chart-card">
-            <h3 class="chart-title">Portfolio Value</h3>
-            <canvas id="valueChart"></canvas>
+    <!-- Action Bar -->
+    <div class="action-bar">
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search..." class="search-input">
         </div>
-        <div class="chart-card">
-            <h3 class="chart-title">Metal Value</h3>
-            <canvas id="metalsValueChart"></canvas>
+        <div class="action-buttons">
+            <button id="addNewBtn" class="btn-icon btn-add" title="Add New Entry" style="display: none;">
+                <span class="icon">+</span>
+            </button>
+            <button id="editModeBtn" class="btn-icon" title="Toggle Edit Mode">
+                <span class="icon" id="editIcon">✏️</span>
+            </button>
         </div>
     </div>
     
-    <!-- Category & Top Worth Section -->
-    <div class="charts-section">
-        <div class="chart-card">
-            <canvas id="categoryDonutChart"></canvas>
-        </div>
-        <div class="chart-card">
-            <div class="top-worth-grid">
-                <div class="top-worth-column">
-                    <h4 class="top-worth-title">Top Coins</h4>
-                    <div class="top-worth-list">
-                        {% for coin in top_coins %}
-                        <div class="top-worth-item">
-                            <span class="item-rank">{{ loop.index }}.</span>
-                            <span class="item-name">{{ coin.country }} {{ coin.denomination }}</span>
-                            <span class="item-value">${{ coin.worth|trim_zeros }}</span>
+    <!-- Data Grid -->
+    <div class="data-grid-container">
+        <table class="data-grid" id="metalsTable">
+            <thead>
+                <tr>
+                    <th class="image-col">Image</th>
+                    <th data-sort="state">State</th>
+                    <th data-sort="denomination">Denomination</th>
+                    <th data-sort="year">Year</th>
+                    <th data-sort="count">Count</th>
+                    <th data-sort="alpha">Alpha</th>
+                    <th data-sort="serial">Serial</th>
+                    <th data-sort="cost">Cost</th>
+                    <th data-sort="worth">Worth</th>
+                    <th data-sort="gain_loss">Gain/Loss</th>
+                    <th data-sort="circulated">Circulated</th>
+                    <th data-sort="notes">Notes</th>
+                    <th class="actions-col" style="display: none;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="goldbacksTableBody">
+                {% for goldback in goldbacks %}
+                <tr data-id="{{ goldback.id }}" class="data-row">
+                    <td class="image-cell">
+                        {% if goldback.image_filename %}
+                        <div class="image-icon-wrapper">
+                            <a href="{{ url_for('static', filename='images/' + goldback.image_filename) }}" target="_blank" class="image-icon-link">
+                                <span class="camera-icon" data-row-id="{{ goldback.id }}">📷</span>
+                            </a>
+                            <input type="file" class="image-upload-input" data-row-id="{{ goldback.id }}" accept="image/*" style="display: none;">
+                            <img src="{{ url_for('static', filename='images/' + goldback.image_filename) }}" 
+                                 alt="{{ goldback.state }}" 
+                                 class="hover-preview">
                         </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                <div class="top-worth-column">
-                    <h4 class="top-worth-title">Top Goldbacks</h4>
-                    <div class="top-worth-list">
-                        {% for goldback in top_goldbacks %}
-                        <div class="top-worth-item">
-                            <span class="item-rank">{{ loop.index }}.</span>
-                            <span class="item-name">{{ goldback.state }} {{ goldback.denomination|int }}</span>
-                            <span class="item-value">${{ goldback.worth|int }}</span>
+                        {% else %}
+                        <span class="no-image">-</span>
+                        <div class="image-icon-wrapper" style="display: none;">
+                            <span class="camera-icon no-image-icon add-icon" data-row-id="{{ goldback.id }}">+</span>
+                            <input type="file" class="image-upload-input" data-row-id="{{ goldback.id }}" accept="image/*" style="display: none;">
                         </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
+                        {% endif %}
+                    </td>
+                    <td class="editable" data-field="state">{{ goldback.state or '-' }}</td>
+                    <td class="editable" data-field="denomination">{{ goldback.denomination_display }}</td>
+                    <td class="editable" data-field="year">{{ goldback.year or '-' }}</td>
+                    <td class="editable" data-field="count">{{ goldback.count }}</td>
+                    <td class="editable" data-field="alpha">{{ goldback.alpha }}</td>
+                    <td class="editable" data-field="serial">{{ goldback.serial or '-' }}</td>
+                    <td class="editable" data-field="cost">{{ goldback.cost|int if goldback.cost == goldback.cost|int else "%.2f"|format(goldback.cost) }}</td>
+                    <td data-field="worth">{{ goldback.worth|int if goldback.worth == goldback.worth|int else "%.2f"|format(goldback.worth) }}</td>
+                    <td class="{% if goldback.gain_loss >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                        ${{ "%.2f"|format(goldback.gain_loss) }}
+                    </td>
+                    <td class="editable" data-field="circulated">{{ goldback.circulated }}</td>
+                    <td class="editable" data-field="notes">{{ goldback.notes or '-' }}</td>
+                    <td class="actions-cell">
+                        <button class="btn-delete" onclick="deleteRow({{ goldback.id }})">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if not goldbacks %}
+        <div class="empty-state">
+            <p>No goldbacks added yet. Click "Add New" to get started.</p>
         </div>
-    </div>
-    
-    <!-- Category Breakdown -->
-    <div class="category-grid">
-        {% for category in categories %}
-        <div class="category-card">
-            <div class="category-header">
-                <h3>
-                    {{ category.name }}
-                    {% if category.total_oz is defined %}
-                        <span style="font-weight: 400; font-size: 16px;">({{ category.total_oz|trim_zeros }} oz)</span>
-                    {% endif %}
-                </h3>
-                <span class="category-count">{{ category.count }} items</span>
-            </div>
-            <div class="category-stats">
-                {% if category.gb_total is defined %}
-                <div class="category-stat-row">
-                    <span class="category-stat-label">GB Total:</span>
-                    <span class="category-stat-value">{{ category.gb_total|trim_zeros }}</span>
-                </div>
-                {% endif %}
-                {% if category.gold_oz is defined %}
-                <div class="category-stat-row">
-                    <span class="category-stat-label">Gold:</span>
-                    <span class="category-stat-value">{{ category.gold_oz|trim_zeros }} oz</span>
-                </div>
-                <div class="category-stat-row">
-                    <span class="category-stat-label">Silver:</span>
-                    <span class="category-stat-value">{{ category.silver_oz|trim_zeros }} oz</span>
-                </div>
-                {% endif %}
-                <div class="category-stat-row">
-                    <span class="category-stat-label">Cost Basis:</span>
-                    <span class="category-stat-value">${{ category.cost|trim_zeros }}</span>
-                </div>
-                <div class="category-stat-row">
-                    <span class="category-stat-label">Current Value:</span>
-                    <span class="category-stat-value">${{ category.value|trim_zeros }}</span>
-                </div>
-                <div class="category-stat-row {% if category.gain >= 0 %}positive{% else %}negative{% endif %}">
-                    <span class="category-stat-label">Gain/Loss:</span>
-                    <span class="category-stat-value">${{ category.gain|trim_zeros }} ({{ category.gain_percent|format_percent }}%)</span>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
+        {% endif %}
     </div>
 </div>
 
-<style>
-.charts-section {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.chart-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: var(--card-shadow);
-    padding: 8px 12px 6px 12px;
-}
-
-.chart-card:has(canvas#categoryDonutChart) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-}
-
-#categoryDonutChart {
-    max-width: 90%;
-}
-
-.chart-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 4px 0;
-    text-align: center;
-}
-
-.category-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.category-card {
-    background: white;
-    border-radius: 8px;
-    box-shadow: var(--card-shadow);
-    padding: 12px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.category-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-}
-
-.category-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid var(--border-color);
-}
-
-.category-header h3 {
-    font-size: 17px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
-}
-
-.category-count {
-    font-size: 12px;
-    color: var(--text-secondary);
-    font-weight: 600;
-}
-
-.category-stats {
-    margin-bottom: 0;
-}
-
-.category-stat-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 5px 0;
-    font-size: 13px;
-}
-
-.category-stat-label {
-    color: var(--text-secondary);
-    font-weight: 500;
-}
-
-.category-stat-value {
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.category-stat-row.positive .category-stat-value {
-    color: var(--success-color);
-}
-
-.category-stat-row.negative .category-stat-value {
-    color: var(--danger-color);
-}
-
-.category-link {
-    display: inline-block;
-    color: var(--accent-bright);
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 14px;
-    margin-top: 12px;
-    transition: transform 0.2s ease;
-}
-
-.category-link:hover {
-    transform: translateX(4px);
-    color: var(--accent-color);
-}
-
-/* Top Worth Lists */
-.top-worth-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 32px;
-}
-
-.top-worth-column {
-    min-width: 0;
-    position: relative;
-}
-
-.top-worth-column:first-child::after {
-    content: '';
-    position: absolute;
-    right: -16px;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background-color: #e0e0e0;
-}
-
-.top-worth-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 6px 0;
-    padding: 0 8px;
-    text-align: center;
-}
-
-.top-worth-list {
-    padding: 4px 8px;
-}
-
-.top-worth-item {
-    display: flex;
-    align-items: center;
-    padding: 4px 0;
-    font-size: 13px;
-    border-bottom: 1px solid #f5f5f5;
-}
-
-.top-worth-item:last-child {
-    border-bottom: none;
-}
-
-.item-rank {
-    color: var(--text-secondary);
-    font-weight: 600;
-    min-width: 28px;
-    flex-shrink: 0;
-}
-
-.item-name {
-    color: var(--text-primary);
-    font-weight: 500;
-    padding: 0 12px 0 8px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.item-value {
-    color: var(--text-primary);
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-    min-width: 85px;
-    flex-shrink: 0;
-    margin-left: auto;
-}
-</style>
+<!-- Add New Modal -->
+<div id="addNewModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-body">
+            <form id="addNewForm">
+                <div class="form-row single-row">
+                    <div class="form-group">
+                        <div class="file-upload-wrapper">
+                            <button type="button" class="btn-upload-image" onclick="document.getElementById('newImage').click()">Upload Image</button>
+                            <span id="fileNameDisplay" class="file-name-display">No file chosen</span>
+                            <input type="file" id="newImage" name="image" accept="image/*" style="display: none;" onchange="updateFileName(this)">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newState">State</label>
+                        <input type="text" id="newState" name="state">
+                    </div>
+                    <div class="form-group">
+                        <label for="newDenomination">Denomination</label>
+                        <input type="text" id="newDenomination" name="denomination">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newYear">Year</label>
+                        <input type="text" id="newYear" name="year">
+                    </div>
+                    <div class="form-group">
+                        <label for="newCount">Count</label>
+                        <input type="number" id="newCount" name="count" value="1" min="1">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newAlpha">Alpha</label>
+                        <div class="checkbox-group inline">
+                            <label class="checkbox-label">
+                                <input type="radio" name="alpha" value="No" checked>
+                                <span>No</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="radio" name="alpha" value="Yes">
+                                <span>Yes</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="newCirculated">Circulated</label>
+                        <div class="checkbox-group inline">
+                            <label class="checkbox-label">
+                                <input type="radio" name="circulated" value="No" checked>
+                                <span>No</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="radio" name="circulated" value="Yes">
+                                <span>Yes</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newSerial">Serial</label>
+                        <input type="text" id="newSerial" name="serial">
+                    </div>
+                    <div class="form-group">
+                        <label for="newCost">Cost</label>
+                        <input type="number" id="newCost" name="cost" step="0.01" value="0">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="newNotes">Notes</label>
+                        <textarea id="newNotes" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick="closeAddNewModal()">Cancel</button>
+            <button type="button" class="btn-save" onclick="saveNewEntry()">Add</button>
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-// Get data from Flask
-const goldValue = {{ metal_breakdown.gold_value }};
-const silverValue = {{ metal_breakdown.silver_value }};
-const goldOz = {{ metal_breakdown.gold_oz }};
-const silverOz = {{ metal_breakdown.silver_oz }};
-const goldValueMetalsOnly = {{ metal_breakdown.gold_value_metals_only }};
-const silverValueMetalsOnly = {{ metal_breakdown.silver_value_metals_only }};
-const goldOzMetalsOnly = {{ metal_breakdown.gold_oz_metals_only }};
-const silverOzMetalsOnly = {{ metal_breakdown.silver_oz_metals_only }};
-
-// Colors
-const goldColor = '#FFD700';
-const silverColor = '#BFC1C2';
-
-// Calculate max values - round up to nearest increment for clean display, add tiny buffer for visual fill
-const maxValuePortfolio = Math.ceil((goldValue + silverValue) / 500) * 500 * 1.001;
-const maxOzPortfolio = Math.ceil((goldOz + silverOz) / 5) * 5 * 1.001;
-const maxValueMetals = Math.ceil((goldValueMetalsOnly + silverValueMetalsOnly) / 250) * 250 * 1.001;
-const maxOzMetals = Math.ceil((goldOzMetalsOnly + silverOzMetalsOnly) / 5) * 5 * 1.001;
-
-// Chart.js configuration for horizontal stacked bar (even smaller height)
-const chartConfig = {
-    type: 'bar',
-    options: {
-        indexAxis: 'y', // This makes it horizontal
-        responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 12, // Changed from 6 to 12 for half the height again
-        plugins: {
-            legend: {
-                display: false // Remove legend
-            },
-            tooltip: {
-                displayColors: false,  // Remove colored squares
-                callbacks: {
-                    title: function() {
-                        return ''; // Remove title (was showing "Worth" or "Ounces")
-                    },
-                    label: function(context) {
-                        const label = context.dataset.label || '';
-                        const value = context.parsed.x;
-                        const total = context.chart.data.datasets.reduce((sum, dataset) => {
-                            return sum + dataset.data[context.dataIndex];
-                        }, 0);
-                        const percentage = total > 0 ? ((value / total) * 100) : 0;
-                        
-                        // Only show percentage if it's at least 0.5% (otherwise shows as "100%" when one is tiny)
-                        const percentageText = percentage >= 0.5 ? ` (${percentage.toFixed(1)}%)` : '';
-                        
-                        if (context.chart.canvas.id.includes('Value')) {
-                            return `${label}: $${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${percentageText}`;
-                        } else {
-                            return `${label}: ${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${percentageText}`;
-                        }
-                    }
-                }
-            }
-        },
-        scales: {
-            x: {
-                stacked: true,
-                grid: {
-                    display: false, // Remove vertical grid lines
-                    drawBorder: false // Remove horizontal line between chart and numbers
-                },
-                border: {
-                    display: false // Remove border line
-                },
-                ticks: {
-                    font: {
-                        size: 11
-                    }
-                }
-            },
-            y: {
-                stacked: true,
-                display: false, // This removes the Y-axis labels ("Worth", "Ounces")
-                grid: {
-                    display: false
-                }
-            }
-        }
-    }
-};
-
-// Full Portfolio Value Chart
-const valueCtx = document.getElementById('valueChart').getContext('2d');
-new Chart(valueCtx, {
-    ...chartConfig,
-    data: {
-        labels: [''],
-        datasets: [
-            {
-                label: 'Gold',
-                data: [goldValue],
-                backgroundColor: goldColor,
-                borderWidth: 0,
-                borderRadius: 6
-            },
-            {
-                label: 'Silver',
-                data: [silverValue],
-                backgroundColor: silverColor,
-                borderWidth: 0,
-                borderRadius: 6
-            }
-        ]
-    },
-    options: {
-        ...chartConfig.options,
-        scales: {
-            ...chartConfig.options.scales,
-            x: {
-                ...chartConfig.options.scales.x,
-                max: maxValuePortfolio,
-                ticks: {
-                    stepSize: 500,
-                    callback: function(value) {
-                        if (value % 500 === 0) {
-                            return value.toLocaleString();
-                        }
-                        return '';
-                    },
-                    font: {
-                        size: 11
-                    }
-                }
-            }
-        }
-    }
-});
-
-// Metals Only Value Chart
-const metalsValueCtx = document.getElementById('metalsValueChart').getContext('2d');
-new Chart(metalsValueCtx, {
-    ...chartConfig,
-    data: {
-        labels: [''],
-        datasets: [
-            {
-                label: 'Gold',
-                data: [goldValueMetalsOnly],
-                backgroundColor: goldColor,
-                borderWidth: 0,
-                borderRadius: 6
-            },
-            {
-                label: 'Silver',
-                data: [silverValueMetalsOnly],
-                backgroundColor: silverColor,
-                borderWidth: 0,
-                borderRadius: 6
-            }
-        ]
-    },
-    options: {
-        ...chartConfig.options,
-        scales: {
-            ...chartConfig.options.scales,
-            x: {
-                ...chartConfig.options.scales.x,
-                max: maxValueMetals,
-                ticks: {
-                    stepSize: 250,
-                    callback: function(value) {
-                        if (value % 250 === 0) {
-                            return value.toLocaleString();
-                        }
-                        return '';
-                    },
-                    font: {
-                        size: 11
-                    }
-                }
-            }
-        }
-    }
-});
-
-// Category Breakdown Donut Chart
-const categoryDonutCtx = document.getElementById('categoryDonutChart').getContext('2d');
-
-// Extract category values
-const categoryLabels = [];
-const categoryValues = [];
-const categoryColors = {
-    'Metals': '#BFC1C2',      // Silver
-    'Coins': '#8B4513',        // Brown
-    'Goldbacks': '#d4af37'     // Goldback gold
-};
-const categoryBackgrounds = [];
-
-{% for category in categories %}
-{% if category.name == 'Goldbacks' %}
-categoryLabels.push('GBs');
-{% else %}
-categoryLabels.push('{{ category.name }}');
-{% endif %}
-categoryValues.push({{ category.value }});
-categoryBackgrounds.push(categoryColors['{{ category.name }}'] || '#95a5a6');
-{% endfor %}
-
-new Chart(categoryDonutCtx, {
-    type: 'doughnut',
-    data: {
-        labels: categoryLabels,
-        datasets: [{
-            data: categoryValues,
-            backgroundColor: categoryBackgrounds,
-            borderWidth: 2,
-            borderColor: '#fff'
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 2.5,
-        plugins: {
-            legend: {
-                display: false  // Remove legend
-            },
-            tooltip: {
-                displayColors: false,  // Remove colored squares
-                callbacks: {
-                    title: function() {
-                        return '';  // Remove title from tooltip
-                    },
-                    label: function(context) {
-                        const value = context.parsed;
-                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                        const percentage = ((value / total) * 100).toFixed(1);
-                        return `$${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${percentage}%)`;
-                    }
-                }
-            },
-            datalabels: {
-                color: '#fff',
-                font: {
-                    weight: 'bold',
-                    size: 14
-                },
-                formatter: function(value, context) {
-                    return context.chart.data.labels[context.dataIndex];
-                }
-            }
-        }
-    },
-    plugins: [{
-        id: 'centerLabels',
-        afterDatasetsDraw: function(chart) {
-            const ctx = chart.ctx;
-            const chartArea = chart.chartArea;
-            const meta = chart.getDatasetMeta(0);
+    let editMode = false;
+    let modifiedRows = new Set();
+    
+    // Toggle Edit Mode
+    document.getElementById('editModeBtn').addEventListener('click', function() {
+        editMode = !editMode;
+        const editIcon = document.getElementById('editIcon');
+        const addNewBtn = document.getElementById('addNewBtn');
+        const actionCells = document.querySelectorAll('.actions-cell');
+        const actionHeader = document.querySelector('.actions-col');
+        const editableCells = document.querySelectorAll('.editable');
+        const cameraIcons = document.querySelectorAll('.camera-icon');
+        
+        if (editMode) {
+            // Switch to edit mode (save icon)
+            editIcon.textContent = '💾';
+            this.title = 'Save All Changes';
+            addNewBtn.style.display = 'block';
             
-            meta.data.forEach((arc, index) => {
-                const centerAngle = (arc.startAngle + arc.endAngle) / 2;
-                const radius = (arc.innerRadius + arc.outerRadius) / 2;
-                const x = chartArea.left + chartArea.width / 2 + Math.cos(centerAngle) * radius;
-                const y = chartArea.top + chartArea.height / 2 + Math.sin(centerAngle) * radius;
+            // Show action column and header
+            if (actionHeader) actionHeader.style.display = 'table-cell';
+            actionCells.forEach(cell => {
+                cell.style.display = 'table-cell';
+            });
+            
+            // Enable inline editing
+            editableCells.forEach(cell => {
+                cell.contentEditable = true;
+                cell.classList.add('editing');
+            });
+            
+            // For each image cell, show camera icon only if no image exists
+            document.querySelectorAll('.image-cell').forEach(cell => {
+                const hasImage = cell.querySelector('.image-icon-link'); // Has actual image
+                const dash = cell.querySelector('.no-image');
+                const wrapper = cell.querySelector('.image-icon-wrapper[style*="display: none"]');
                 
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 14px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(chart.data.labels[index], x, y);
+                if (!hasImage && dash && wrapper) {
+                    // No image - show camera icon, hide dash
+                    dash.style.display = 'none';
+                    wrapper.style.display = 'inline-block';
+                }
+            });
+            
+            // Make camera icons clickable for upload
+            cameraIcons.forEach(icon => {
+                icon.style.cursor = 'pointer';
+                icon.addEventListener('click', handleImageUploadClick);
+            });
+            
+        } else {
+            // Save all changes and exit edit mode
+            if (modifiedRows.size > 0) {
+                saveAllChanges();
+            }
+            
+            // Switch back to view mode (pencil icon)
+            editIcon.textContent = '✏️';
+            this.title = 'Toggle Edit Mode';
+            addNewBtn.style.display = 'none';
+            
+            // Hide action column and header
+            if (actionHeader) actionHeader.style.display = 'none';
+            actionCells.forEach(cell => {
+                cell.style.display = 'none';
+            });
+            
+            // Disable inline editing
+            editableCells.forEach(cell => {
+                cell.contentEditable = false;
+                cell.classList.remove('editing');
+            });
+            
+            // For each image cell, hide camera icon and show dash if no image
+            document.querySelectorAll('.image-cell').forEach(cell => {
+                const hasImage = cell.querySelector('.image-icon-link');
+                const dash = cell.querySelector('.no-image');
+                const wrapper = cell.querySelector('.image-icon-wrapper[style*="display: none"], .image-icon-wrapper[style*="inline-block"]');
+                
+                if (!hasImage && dash && wrapper) {
+                    // No image - show dash, hide camera icon
+                    dash.style.display = '';
+                    wrapper.style.display = 'none';
+                }
+            });
+            
+            // Remove upload handlers from camera icons
+            cameraIcons.forEach(icon => {
+                icon.style.cursor = '';
+                icon.removeEventListener('click', handleImageUploadClick);
             });
         }
-    }]
-});
-
+        
+        this.classList.toggle('active');
+    });
+    
+    // Handle camera icon click in edit mode
+    function handleImageUploadClick(e) {
+        if (!editMode) return;
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const rowId = this.dataset.rowId;
+        const fileInput = document.querySelector(`.image-upload-input[data-row-id="${rowId}"]`);
+        if (fileInput) {
+            fileInput.click();
+        }
+    }
+    
+    // Handle file selection for existing rows
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('image-upload-input')) {
+            const rowId = e.target.dataset.rowId;
+            const file = e.target.files[0];
+            
+            if (file && editMode) {
+                uploadImageForRow(rowId, file);
+            }
+        }
+    });
+    
+    // Track cell modifications
+    document.getElementById('goldbacksTableBody').addEventListener('input', function(e) {
+        if (e.target.classList.contains('editable')) {
+            const row = e.target.closest('tr');
+            const rowId = row.dataset.id;
+            modifiedRows.add(rowId);
+            row.classList.add('modified');
+            
+            // Recalculate current value if metal, weight, or count changed
+            const field = e.target.dataset.field;
+            if (field === 'metal' || field === 'weight_oz' || field === 'count') {
+                recalculateRowValue(row);
+            }
+        }
+    });
+    
+    // Recalculate current value for a row
+    function recalculateRowValue(row) {
+        const metal = row.querySelector('[data-field="metal"]').textContent.trim();
+        const weightOz = parseFloat(row.querySelector('[data-field="weight_oz"]').textContent.trim());
+        const count = parseInt(row.querySelector('[data-field="count"]').textContent.trim());
+        
+        if (metal && weightOz && count) {
+            const currentValue = calculateCurrentValue(metal, weightOz, count);
+            const currentValueCell = row.querySelector('[data-field="current_value"]');
+            if (currentValueCell && currentValue) {
+                currentValueCell.textContent = currentValue.toFixed(2);
+            }
+        }
+    }
+    
+    // Save all changes
+    function saveAllChanges() {
+        if (modifiedRows.size === 0) {
+            return;
+        }
+        
+        const promises = [];
+        
+        modifiedRows.forEach(rowId => {
+            const row = document.querySelector(`tr[data-id="${rowId}"]`);
+            const data = {
+                state: row.querySelector('[data-field="state"]').textContent.trim(),
+                denomination: row.querySelector('[data-field="denomination"]').textContent.trim(), // Send as text, server will parse
+                year: row.querySelector('[data-field="year"]').textContent.trim(),
+                count: parseInt(row.querySelector('[data-field="count"]').textContent.trim()),
+                alpha: row.querySelector('[data-field="alpha"]').textContent.trim(),
+                serial: row.querySelector('[data-field="serial"]').textContent.trim(),
+                cost: parseFloat(row.querySelector('[data-field="cost"]').textContent.trim()),
+                circulated: row.querySelector('[data-field="circulated"]').textContent.trim(),
+                notes: row.querySelector('[data-field="notes"]').textContent.trim()
+            };
+            
+            // Replace '-' with empty string
+            if (data.state === '-') data.state = '';
+            if (data.year === '-') data.year = '';
+            if (data.serial === '-') data.serial = '';
+            if (data.notes === '-') data.notes = '';
+            
+            const promise = fetch(`/api/goldbacks/${rowId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            promises.push(promise);
+        });
+        
+        Promise.all(promises)
+            .then(() => {
+                modifiedRows.clear();
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error saving changes:', error);
+                alert('Error saving changes. Please try again.');
+            });
+    }
+    
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#goldbacksTableBody tr');
+        
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+    });
+    
+    // Delete row function
+    function deleteRow(id) {
+        if (!confirm('Are you sure you want to delete this entry?')) {
+            return;
+        }
+        
+        fetch(`/api/goldbacks/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting entry:', error);
+            alert('Error deleting entry. Please try again.');
+        });
+    }
+    
+    // Add New Modal Functions
+    document.getElementById('addNewBtn').addEventListener('click', function() {
+        document.getElementById('addNewModal').style.display = 'flex';
+    });
+    
+    function updateFileName(input) {
+        const display = document.getElementById('fileNameDisplay');
+        if (input.files && input.files[0]) {
+            display.textContent = input.files[0].name;
+        } else {
+            display.textContent = 'No file chosen';
+        }
+    }
+    
+    function closeAddNewModal() {
+        document.getElementById('addNewModal').style.display = 'none';
+        document.getElementById('addNewForm').reset();
+        // Reset submission flag
+        isSubmitting = false;
+        const saveButton = document.querySelector('.btn-save');
+        saveButton.textContent = 'Add';
+        saveButton.disabled = false;
+    }
+    
+    let isSubmitting = false;
+    
+    function saveNewEntry() {
+        if (isSubmitting) {
+            return;
+        }
+        
+        const form = document.getElementById('addNewForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        // Get Yes/No radio values
+        const alphaRadio = document.querySelector('input[name="alpha"]:checked');
+        const circulatedRadio = document.querySelector('input[name="circulated"]:checked');
+        
+        // Build FormData with goldback fields
+        const formData = new FormData();
+        formData.append('state', document.getElementById('newState').value);
+        formData.append('denomination', parseInt(document.getElementById('newDenomination').value) || 1);
+        formData.append('year', document.getElementById('newYear').value);
+        formData.append('count', parseInt(document.getElementById('newCount').value) || 1);
+        formData.append('alpha', alphaRadio ? alphaRadio.value : 'No');
+        formData.append('serial', document.getElementById('newSerial').value);
+        formData.append('cost', parseFloat(document.getElementById('newCost').value) || 0);
+        formData.append('circulated', circulatedRadio ? circulatedRadio.value : 'No');
+        formData.append('notes', document.getElementById('newNotes').value);
+        
+        const imageFile = document.getElementById('newImage').files[0];
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+        
+        isSubmitting = true;
+        const saveButton = document.querySelector('.btn-save');
+        saveButton.textContent = 'Adding...';
+        saveButton.disabled = true;
+        
+        fetch('/api/goldbacks', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                closeAddNewModal();
+                window.location.href = window.location.pathname + '?edit=1';
+            } else {
+                alert('Error: ' + (result.error || 'Unknown error'));
+                isSubmitting = false;
+                saveButton.textContent = 'Add';
+                saveButton.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error adding entry.');
+            isSubmitting = false;
+            saveButton.textContent = 'Add';
+            saveButton.disabled = false;
+        });
+    }
+    
+    // Upload image for existing row
+    function uploadImageForRow(rowId, file) {
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        fetch(`/api/goldbacks/${rowId}/image`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                // Reload but stay in edit mode
+                const url = new URL(window.location);
+                url.searchParams.set('edit', '1');
+                window.location.href = url.toString();
+            } else {
+                alert('Error uploading image: ' + (result.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error uploading image');
+        });
+    }
+    
+    // Hide actions column by default
+    document.addEventListener('DOMContentLoaded', function() {
+        const actionCells = document.querySelectorAll('.actions-cell');
+        actionCells.forEach(cell => {
+            cell.style.display = 'none';
+        });
+        
+        // Check if we should auto-enter edit mode
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('edit') === '1') {
+            // Trigger edit mode
+            document.getElementById('editModeBtn').click();
+            // Clean up URL
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    });
 </script>
 {% endblock %}
