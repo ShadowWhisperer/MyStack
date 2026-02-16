@@ -106,7 +106,7 @@
                     <td class="editable" data-field="purity">{{ metal.purity }}</td>
                     <td class="editable" data-field="year">{{ metal.year or '-' }}</td>
                     <td class="editable" data-field="total_cost">{{ metal.total_cost|int if metal.total_cost == metal.total_cost|int else "%.2f"|format(metal.total_cost) }}</td>
-                    <td data-field="current_value">{{ metal.current_value|int if metal.current_value == metal.current_value|int else "%.2f"|format(metal.current_value) }}</td>
+                    <td data-field="current_value">{{ metal.calculated_value|int if metal.calculated_value == metal.calculated_value|int else "%.2f"|format(metal.calculated_value) }}</td>
                     <td class="{% if metal.gain_loss >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
                         ${{ "%.2f"|format(metal.gain_loss) }}
                     </td>
@@ -122,7 +122,7 @@
         
         {% if not metals %}
         <div class="empty-state">
-            <p>No metals added yet. Click the pencil to add one.</p>
+            <p>No metals added yet. Click "Add New" to get started.</p>
         </div>
         {% endif %}
     </div>
@@ -564,7 +564,7 @@
         formData.append('purity', document.getElementById('newPurity').value);
         formData.append('year', document.getElementById('newYear').value);
         formData.append('total_cost', parseFloat(document.getElementById('newTotalCost').value) || 0);
-        formData.append('current_value', currentValue);
+        // current_value is calculated automatically on server
         formData.append('brand', document.getElementById('newBrand').value);
         formData.append('notes', document.getElementById('newNotes').value);
         
