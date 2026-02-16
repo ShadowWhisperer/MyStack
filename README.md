@@ -12,7 +12,7 @@
 - Single database file (Images stored seperatly)
 
 ## Dashboard
-<img width="1920" height="919" alt="Dashboard" src="https://github.com/user-attachments/assets/e8460dd8-4264-40fe-9489-48befd13c227" />
+<img width="1920" height="1066" alt="Dashboard" src="https://github.com/user-attachments/assets/71414686-b3e4-4996-9ee4-273224bfeadf" />
 
 ## Coins
 <img width="1917" height="919" alt="Coins" src="https://github.com/user-attachments/assets/c948cb25-6ffc-429b-b8c6-dc25503be5a5" />
@@ -24,15 +24,14 @@
 <img width="1920" height="919" alt="Goldbacks" src="https://github.com/user-attachments/assets/25e5ea4c-62f6-4a98-aa09-7b87caf1df9c" />
 
 ## Metals
-<img width="1919" height="919" alt="Metals" src="https://github.com/user-attachments/assets/d79eea3e-3e51-48ae-8bff-67aed1bcf5a8" />
-
+<img width="1920" height="1064" alt="Metals" src="https://github.com/user-attachments/assets/3a213876-ff9b-490c-b9e2-1ca7106bdf28" />
 
 ## Credits  
 - Built with Claud.ai  
 - Metal prices from Yahoo  
 
 ## Links  
+Numista: https://numista.com/  
 Goldback: https://www.goldback.com/  
-Numista: https://en.numista.com/  
-Reputable Auctioneer with metal tester: https://klaassenrealty.hibid.com/  
 DefyTheGrid: https://defythegrid.com/  
+Reputable Auctioneer with metal tester: https://klaassenrealty.hibid.com/  
