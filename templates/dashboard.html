@@ -135,11 +135,16 @@
     padding: 8px 12px 6px 12px;
 }
 
+/* Extra vertical padding for donut chart to prevent stretching */
+.chart-card:has(canvas#categoryDonutChart) {
+    padding: 12px 12px;
+}
+
 .chart-card:has(canvas#categoryDonutChart) {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    padding: 0px;
 }
 
 #categoryDonutChart {
@@ -534,7 +539,7 @@ new Chart(categoryDonutCtx, {
     options: {
         responsive: true,
         maintainAspectRatio: true,
-        aspectRatio: 2.5,
+        aspectRatio: 2,
         plugins: {
             legend: {
                 display: false  // Remove legend
@@ -549,7 +554,7 @@ new Chart(categoryDonutCtx, {
                         const value = context.parsed;
                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                         const percentage = ((value / total) * 100).toFixed(1);
-                        return `$${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${percentage}%)`;
+                        return `$${Math.round(value).toLocaleString('en-US')} (${percentage}%)`;
                     }
                 }
             },
