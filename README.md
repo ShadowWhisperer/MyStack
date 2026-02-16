@@ -1,6 +1,5 @@
-🚨  BETA  🚨  
-
 ### Features
+- Single user login
 - 100% local (Other than Yahoo metal prices). All data entry is manual.
 - Manage: cost, value, when valued last, KM # with Links, and other specifics
 - Get live Gold, Silver, and Goldback prices. Updated every 30 minutes or manually.
@@ -10,6 +9,17 @@
 - High value items
 - Tag an image to the item. See a preview or click for full resolution
 - Single database file (Images stored seperatly)
+
+### Notes
+```diff
+Default Login Credentials, if not set
+User: admin
+Pass: changeme
+
+Database file: /app/data
+Images:        /static/images
+      
+```
 
 ## Dashboard
 <img width="1920" height="946" alt="Dashboard" src="https://github.com/user-attachments/assets/507a967b-dc41-4581-928f-c6a6b104ffe6" />
