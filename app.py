@@ -537,7 +537,6 @@ def metals():
                          stats=stats)
 
 # API endpoints for CRUD operations
-@login_required
 @app.route('/api/metals', methods=['GET'])
 @login_required
 def get_metals():
@@ -558,7 +557,6 @@ def get_metals():
         'image_filename': m.image_filename
     } for m in metals_list])
 
-@login_required
 @app.route('/api/metals', methods=['POST'])
 @login_required
 def add_metal():
