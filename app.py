@@ -171,14 +171,33 @@ class Metal(db.Model):
         return formatted
     
     @property
+    def calculated_value(self):
+        """Calculate current value based on live metal prices and weight"""
+        if not self.weight_oz or not self.metal:
+            return 0.0
+        
+        # Get current metal price
+        metal_type = self.metal.lower()
+        if metal_type not in ['gold', 'silver']:
+            return self.current_value  # Fallback to stored value for other metals
+        
+        price_per_oz = price_fetcher.get_price(metal_type)
+        if not price_per_oz:
+            return self.current_value  # Fallback to stored value if price unavailable
+        
+        # Calculate: price per oz × weight × count
+        total_oz = self.weight_oz * (self.count or 1)
+        return total_oz * price_per_oz
+    
+    @property
     def gain_loss(self):
-        return self.current_value - self.total_cost
+        return self.calculated_value - self.total_cost
     
     @property
     def gain_loss_percent(self):
         if self.total_cost == 0 or self.total_cost is None:
             return 0.0
-        return ((self.current_value - self.total_cost) / self.total_cost) * 100
+        return ((self.calculated_value - self.total_cost) / self.total_cost) * 100
 
 class Coin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -292,7 +311,7 @@ def dashboard():
     
     # Calculate individual category stats
     metals_cost = sum(m.total_cost for m in metals_list)
-    metals_value = sum(m.current_value for m in metals_list)
+    metals_value = sum(m.calculated_value for m in metals_list)
     metals_gain = metals_value - metals_cost
     
     coins_cost = sum(c.total_cost for c in coins_list)
@@ -372,14 +391,14 @@ def dashboard():
     # From Metals table
     for metal in metals_list:
         if metal.metal and metal.metal.lower() == 'gold':
-            gold_value += metal.current_value
+            gold_value += metal.calculated_value
             gold_oz += (metal.weight_oz * metal.count) if metal.weight_oz else 0
-            gold_value_metals_only += metal.current_value
+            gold_value_metals_only += metal.calculated_value
             gold_oz_metals_only += (metal.weight_oz * metal.count) if metal.weight_oz else 0
         elif metal.metal and metal.metal.lower() == 'silver':
-            silver_value += metal.current_value
+            silver_value += metal.calculated_value
             silver_oz += (metal.weight_oz * metal.count) if metal.weight_oz else 0
-            silver_value_metals_only += metal.current_value
+            silver_value_metals_only += metal.calculated_value
             silver_oz_metals_only += (metal.weight_oz * metal.count) if metal.weight_oz else 0
     
     # From Coins table (if material is specified)
@@ -419,7 +438,7 @@ def dashboard():
     # Get top worth items for each category
     top_coins = sorted(coins_list, key=lambda x: x.worth, reverse=True)[:10]
     top_goldbacks = sorted(goldbacks_list, key=lambda x: x.worth, reverse=True)[:10]
-    top_metals = sorted(metals_list, key=lambda x: x.current_value, reverse=True)[:10]
+    top_metals = sorted(metals_list, key=lambda x: x.calculated_value, reverse=True)[:10]
     
     return render_template('dashboard.html', 
                          active_page='dashboard',
@@ -501,7 +520,7 @@ def metals():
     
     # Calculate stats
     total_cost = sum(m.total_cost for m in metals_list)
-    total_current_value = sum(m.current_value for m in metals_list)
+    total_current_value = sum(m.calculated_value for m in metals_list)
     total_gain_loss = total_current_value - total_cost
     total_gain_loss_percent = ((total_gain_loss / total_cost) * 100) if total_cost > 0 else 0
     
@@ -532,7 +551,7 @@ def get_metals():
         'purity': m.purity,
         'year': m.year,
         'total_cost': m.total_cost,
-        'current_value': m.current_value,
+        'current_value': m.calculated_value,
         'gain_loss': m.gain_loss,
         'brand': m.brand,
         'notes': m.notes,
@@ -599,7 +618,7 @@ def update_metal(id):
     metal.purity = data.get('purity', metal.purity)
     metal.year = data.get('year', metal.year)
     metal.total_cost = data.get('total_cost', metal.total_cost)
-    metal.current_value = data.get('current_value', metal.current_value)
+    # current_value is now calculated dynamically, not stored
     metal.brand = data.get('brand', metal.brand)
     metal.notes = data.get('notes', metal.notes)
     
@@ -994,9 +1013,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     
-    # Only start price updater in the reloader child process
-    import os
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        start_price_updater()
+    # Start price updater
+    start_price_updater()
     
-    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=True)
+    app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)
