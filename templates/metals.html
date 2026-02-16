@@ -3,6 +3,7 @@
 {% block title %}Metals{% endblock %}
 
 {% block content %}
+<div class="page-container">
 <style>
     /* Tighter row height for Metals */
     #metalsTable tbody tr {
@@ -105,7 +106,7 @@
                     <td class="editable" data-field="purity">{{ metal.purity }}</td>
                     <td class="editable" data-field="year">{{ metal.year or '-' }}</td>
                     <td class="editable" data-field="total_cost">{{ metal.total_cost|int if metal.total_cost == metal.total_cost|int else "%.2f"|format(metal.total_cost) }}</td>
-                    <td class="editable" data-field="current_value">{{ metal.current_value|int if metal.current_value == metal.current_value|int else "%.2f"|format(metal.current_value) }}</td>
+                    <td data-field="current_value">{{ metal.current_value|int if metal.current_value == metal.current_value|int else "%.2f"|format(metal.current_value) }}</td>
                     <td class="{% if metal.gain_loss >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
                         ${{ "%.2f"|format(metal.gain_loss) }}
                     </td>
@@ -121,7 +122,7 @@
         
         {% if not metals %}
         <div class="empty-state">
-            <p>No metals added yet. Click the "pencil" to add one.</p>
+            <p>No metals added yet. Click "Add New" to get started.</p>
         </div>
         {% endif %}
     </div>
@@ -399,7 +400,7 @@
                 purity: row.querySelector('[data-field="purity"]').textContent.trim(),
                 year: row.querySelector('[data-field="year"]').textContent.trim(),
                 total_cost: parseFloat(row.querySelector('[data-field="total_cost"]').textContent.trim()),
-                current_value: parseFloat(row.querySelector('[data-field="current_value"]').textContent.trim()),
+                // current_value is calculated automatically, not editable
                 brand: row.querySelector('[data-field="brand"]').textContent.trim(),
                 notes: row.querySelector('[data-field="notes"]').textContent.trim()
             };
@@ -663,4 +664,5 @@
         }
     });
 </script>
+</div>
 {% endblock %}
