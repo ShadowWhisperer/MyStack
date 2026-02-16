@@ -19,11 +19,12 @@ RUN mkdir -p /app/data \
     /app/static/images/metals \
     /app/static/images/coins \
     /app/static/images/goldbacks && \
-    ls -la /app/static/images/ && \
-    echo "Checking for favicon..." && \
-    ls -la /app/static/favicon.png || echo "WARNING: favicon.png not found"
-    echo "Checking for goldback logo..." && \
-    ls -la /app/static/gb_logo.png || echo "WARNING: favicon.png not found"
+    echo "=== Checking static files ===" && \
+    ls -la /app/static/ && \
+    echo "=== Verifying favicon.png ===" && \
+    ls -la /app/static/favicon.png && \
+    echo "=== Verifying gb_logo.png ===" && \
+    ls -la /app/static/gb_logo.png
 
 # Expose port
 EXPOSE 5000
