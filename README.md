@@ -12,7 +12,7 @@
 - Single database file (Images stored seperatly)
 
 ## Dashboard
-<img width="1920" height="1066" alt="Dashboard" src="https://github.com/user-attachments/assets/71414686-b3e4-4996-9ee4-273224bfeadf" />
+<img width="1920" height="946" alt="Dashboard" src="https://github.com/user-attachments/assets/507a967b-dc41-4581-928f-c6a6b104ffe6" />
 
 ## Coins
 <img width="1917" height="919" alt="Coins" src="https://github.com/user-attachments/assets/c948cb25-6ffc-429b-b8c6-dc25503be5a5" />
@@ -24,7 +24,7 @@
 <img width="1920" height="919" alt="Goldbacks" src="https://github.com/user-attachments/assets/25e5ea4c-62f6-4a98-aa09-7b87caf1df9c" />
 
 ## Metals
-<img width="1920" height="1064" alt="Metals" src="https://github.com/user-attachments/assets/3a213876-ff9b-490c-b9e2-1ca7106bdf28" />
+<img width="1920" height="946" alt="Metals" src="https://github.com/user-attachments/assets/41d36b36-eb77-439a-8d55-a1ee0a50506c" />
 
 ## Credits  
 - Built with Claud.ai  
