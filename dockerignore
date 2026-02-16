@@ -1,0 +1,22 @@
+# Don't copy these to Docker image
+.env
+*.db
+*.db-journal
+data/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+README.md
+DEPLOYMENT.md
+QUICKSTART.md
+.vscode/
+.idea/
+
+# DO copy static files (including favicon)
+# These are NOT ignored - will be copied
+!static/images/favicon.png
+!static/images/.gitkeep
+!static/images/metals/.gitkeep
+!static/images/coins/.gitkeep
+!static/images/goldbacks/.gitkeep

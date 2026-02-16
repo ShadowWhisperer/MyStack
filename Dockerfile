@@ -14,11 +14,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application
 COPY . .
 
-# Create necessary directories
+# Ensure static directory structure exists with all files
 RUN mkdir -p /app/data \
     /app/static/images/metals \
     /app/static/images/coins \
-    /app/static/images/goldbacks
+    /app/static/images/goldbacks && \
+    ls -la /app/static/images/ && \
+    echo "Checking for favicon..." && \
+    ls -la /app/static/images/favicon.png || echo "WARNING: favicon.png not found"
 
 # Expose port
 EXPOSE 5000
