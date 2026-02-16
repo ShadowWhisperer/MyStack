@@ -1,7 +1,7 @@
 🚨  BETA  🚨  
 
 ### Features
-- 100% local (Other than getting Yahoo metal prices). All data entry is manual.
+- 100% local (Other than Yahoo metal prices). All data entry is manual.
 - Manage: cost, value, when valued last, KM # with Links, and other specifics
 - Get live Gold, Silver, and Goldback prices. Updated every 30 minutes or manually.
 - Searchable tables
