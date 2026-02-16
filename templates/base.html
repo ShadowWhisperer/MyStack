@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MyStack{% endblock %}</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
         .widget-header {
@@ -53,7 +53,10 @@
                 <a href="{{ url_for('metals') }}" class="nav-item {% if active_page == 'metals' %}active{% endif %}">
                     <span class="nav-label">Metals</span>
                 </a>
-             </nav>
+                <a href="{{ url_for('logout') }}" class="nav-item" style="margin-top: auto; color: #e74c3c;">
+                    <span class="nav-label">🚪 Logout</span>
+                </a>
+            </nav>
             
             <div class="sidebar-widgets">
                 <!-- Metal Prices Widget -->
@@ -82,7 +85,7 @@
                 <div class="widget goldback-rate-widget">
                     <div class="widget-content">
                         <div class="gb-rate-item">
-                            <img src="{{ url_for('static', filename='images/gb_logo.png') }}" alt="Goldback" class="gb-widget-logo">
+                            <img src="{{ url_for('static', filename='gb_logo.png') }}" alt="Goldback" class="gb-widget-logo">
                             <span class="gb-rate-value" id="goldbackRate">$--</span>
                         </div>
                     </div>
