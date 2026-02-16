@@ -21,7 +21,9 @@ RUN mkdir -p /app/data \
     /app/static/images/goldbacks && \
     ls -la /app/static/images/ && \
     echo "Checking for favicon..." && \
-    ls -la /app/static/images/favicon.png || echo "WARNING: favicon.png not found"
+    ls -la /app/static/favicon.png || echo "WARNING: favicon.png not found"
+    echo "Checking for goldback logo..." && \
+    ls -la /app/static/gb_logo.png || echo "WARNING: favicon.png not found"
 
 # Expose port
 EXPOSE 5000
