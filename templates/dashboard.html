@@ -135,16 +135,12 @@
     padding: 8px 12px 6px 12px;
 }
 
-/* Extra vertical padding for donut chart to prevent stretching */
-.chart-card:has(canvas#categoryDonutChart) {
-    padding: 12px 12px;
-}
-
+/* Donut chart centering */
 .chart-card:has(canvas#categoryDonutChart) {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0px;
+    padding: 12px;
 }
 
 #categoryDonutChart {
@@ -321,7 +317,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/chart.min.js') }}"></script>
 <script>
 // Get data from Flask
 const goldValue = {{ metal_breakdown.gold_value }};
