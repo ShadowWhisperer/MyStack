@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import threading
 import time
+import traceback
 from price_fetcher import price_fetcher
 import os
 from werkzeug.utils import secure_filename
@@ -48,6 +49,16 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
+
+# Login attempt tracking (global)
+# tries: resets each lockout cycle, total_fails: never resets until success
+login_state = {'tries': 0, 'total_fails': 0, 'lockout_until': None}
+
+def get_lockout_seconds(total_fails):
+    """2 min on 3rd total fail, +1 min for every fail after that"""
+    if total_fails < 3:
+        return 0
+    return 120 + (total_fails - 3) * 60
 
 # Custom Jinja filter to remove trailing zeros
 @app.template_filter('trim_zeros')
@@ -99,45 +110,41 @@ def update_prices_periodically():
     """Background thread to update metal prices every 30 minutes"""
     # Fetch prices immediately on first run
     try:
-        print("[PRICES] Fetching initial prices...")
         start = time.time()
         price_fetcher.fetch_all_prices()
-        print(f"[PRICES] Initial fetch completed in {time.time() - start:.2f}s")
     except Exception as e:
-        print(f"[PRICES] Error on initial fetch: {e}")
+        print(f"[ERROR] Startup price check: {e}")
     
     while True:
         # Wait 30 minutes (1800 seconds)
         time.sleep(1800)
         
         try:
-            print("[PRICES] Updating prices...")
+            print("[INFO] Updating prices...")
             price_fetcher.fetch_all_prices()
         except Exception as e:
-            print(f"[PRICES] Error updating prices: {e}")
+            print(f"[ERROR] Updating prices: {e}")
 
 # Start background thread
 def start_price_updater():
-    """Start the price update background thread"""
     # Start background thread (will fetch immediately, then every 30 min)
     thread = threading.Thread(target=update_prices_periodically, daemon=True)
     thread.start()
-    print("[PRICES] Price updater thread started (non-blocking)")
 
 # Models
 class Metal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    metal = db.Column(db.String(50), nullable=False)  # Gold, Silver, Copper
-    form = db.Column(db.String(50), nullable=False)  # Bar, Round, Coin, Other
+    metal = db.Column(db.String(50), nullable=False)
+    form = db.Column(db.String(50), nullable=False)
     count = db.Column(db.Integer, default=1)
     weight_oz = db.Column(db.Float, nullable=False)
-    purity = db.Column(db.String(20), nullable=False)  # .999, .9999, etc.
-    year = db.Column(db.String(10))  # Year
+    purity = db.Column(db.String(20), nullable=False)
+    year = db.Column(db.String(10))
     total_cost = db.Column(db.Float, nullable=False)
     current_value = db.Column(db.Float, default=0.0)
-    brand = db.Column(db.String(50))  # Brand name
+    brand = db.Column(db.String(50))
     notes = db.Column(db.Text)
-    image_filename = db.Column(db.String(255))  # Image filename
+    image_filename = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     @property
@@ -145,7 +152,7 @@ class Metal(db.Model):
         """Convert decimal weight to fraction for common values"""
         if not self.weight_oz:
             return '-'
-        
+
         # Common fraction mappings
         fractions = {
             0.005: '1/200',
@@ -156,7 +163,7 @@ class Metal(db.Model):
             0.25: '1/4',
             0.5: '1/2'
         }
-        
+
         # Check if weight matches a common fraction (with small tolerance for float precision)
         for decimal, fraction in fractions.items():
             if abs(self.weight_oz - decimal) < 0.0001:
@@ -169,7 +176,7 @@ class Metal(db.Model):
         # For other decimals, use trim_zeros equivalent
         formatted = f'{self.weight_oz:.6f}'.rstrip('0').rstrip('.')
         return formatted
-    
+
     @property
     def calculated_value(self):
         """Calculate current value based on live metal prices and weight"""
@@ -278,18 +285,57 @@ class Goldback(db.Model):
 # Routes
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    global login_state
+    
+    # Check if currently locked out
+    remaining = 0
+    if login_state['lockout_until']:
+        if time.time() < login_state['lockout_until']:
+            remaining = int(login_state['lockout_until'] - time.time())
+            return render_template('login.html', lockout_remaining=remaining)
+        else:
+            # Lockout expired — reset tries only, keep total_fails
+            login_state['tries'] = 0
+            login_state['lockout_until'] = None
+    
     if request.method == 'POST':
+        # Recheck lockout (race condition guard)
+        if login_state['lockout_until'] and time.time() < login_state['lockout_until']:
+            remaining = int(login_state['lockout_until'] - time.time())
+            return render_template('login.html', lockout_remaining=remaining)
+
         username = request.form.get('username')
         password = request.form.get('password')
-        
+
         if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            # Success — reset everything
+            login_state.update({'tries': 0, 'total_fails': 0, 'lockout_until': None})
             session['logged_in'] = True
             session['username'] = username
             return redirect(url_for('dashboard'))
         else:
-            flash('Invalid credentials')
+            # Failed attempt
+            login_state['tries'] += 1
+            login_state['total_fails'] += 1
+            tries = login_state['tries']
+            total_fails = login_state['total_fails']
+            lockout_secs = get_lockout_seconds(total_fails)
+            lockout_until = (time.time() + lockout_secs) if lockout_secs > 0 else None
+            login_state['lockout_until'] = lockout_until
+
+            if lockout_until:
+                unlock_time = datetime.fromtimestamp(lockout_until).strftime('%H:%M:%S')
+                ip = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
+                print(f"[LOGIN] {ip}  Too many login fails. Locked for {lockout_secs}s")
+                remaining = lockout_secs
+                return render_template('login.html', lockout_remaining=remaining)
+            else:
+                attempts_left = 3 - tries
+                ip = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
+                print(f"[LOGIN] {ip}  Failed attempt {tries}/2")
+                flash(f'Invalid credentials. {attempts_left} attempt{"s" if attempts_left != 1 else ""} left.')
     
-    return render_template('login.html')
+    return render_template('login.html', lockout_remaining=0)
 
 @app.route('/logout')
 def logout():
@@ -596,9 +642,9 @@ def add_metal():
         db.session.add(new_metal)
         db.session.commit()
         return jsonify({'success': True, 'id': new_metal.id}), 201
-    
+
     except Exception as e:
-        print(f"Error adding metal: {e}")
+        print(f"[ERROR] Adding metal: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
 
@@ -619,7 +665,7 @@ def update_metal(id):
     # current_value is now calculated dynamically, not stored
     metal.brand = data.get('brand', metal.brand)
     metal.notes = data.get('notes', metal.notes)
-    
+
     db.session.commit()
     return jsonify({'success': True})
 
@@ -641,35 +687,34 @@ def delete_metal(id):
 @login_required
 @app.route('/api/metals/<int:id>/image', methods=['POST'])
 def upload_metal_image(id):
-    """Upload or replace image for existing metal entry"""
     try:
         metal = Metal.query.get_or_404(id)
-        
+
         if 'image' not in request.files:
             return jsonify({'success': False, 'error': 'No image file'}), 400
-        
+
         file = request.files['image']
         if not file.filename:
             return jsonify({'success': False, 'error': 'No file selected'}), 400
-        
+
         # Delete old image if exists
         if metal.image_filename:
             old_path = os.path.join(UPLOAD_FOLDER, metal.image_filename)
             if os.path.exists(old_path):
                 os.remove(old_path)
-        
+
         # Save new image
         image_filename = save_upload_file(file, 'metals')
         if not image_filename:
             return jsonify({'success': False, 'error': 'Failed to save image'}), 400
-        
+
         metal.image_filename = image_filename
         db.session.commit()
-        
+
         return jsonify({'success': True})
-    
+
     except Exception as e:
-        print(f"Error uploading image: {e}")
+        print(f"[ERROR] Uploading image: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
 
@@ -722,12 +767,7 @@ def parse_denomination(value):
     value_str = str(value).strip()
     
     # Check for fractions
-    if value_str == '1/2':
-        return 0.5
-    elif value_str == '1/4':
-        return 0.25
-    elif '/' in value_str:
-        # Generic fraction parsing
+    if '/' in value_str:
         try:
             parts = value_str.split('/')
             return float(parts[0]) / float(parts[1])
@@ -778,7 +818,7 @@ def add_goldback():
         return jsonify({'success': True, 'id': new_goldback.id}), 201
     
     except Exception as e:
-        print(f"Error adding goldback: {e}")
+        print(f"[ERROR] Adding goldback: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
 
@@ -848,7 +888,7 @@ def upload_goldback_image(id):
         return jsonify({'success': True})
     
     except Exception as e:
-        print(f"Error uploading image: {e}")
+        print(f"[ERROR] Uploading image: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
 
@@ -859,7 +899,8 @@ def get_prices():
     """Get current metal prices"""
     force_refresh = request.args.get('refresh', 'false').lower() == 'true'
     if force_refresh:
-        price_fetcher.fetch_all_prices()  # Force immediate fetch
+        thread = threading.Thread(target=price_fetcher.fetch_all_prices)
+        thread.start()
     return jsonify(price_fetcher.get_prices())
 
 # Coins API Endpoints
@@ -925,7 +966,7 @@ def add_coin():
         return jsonify({'success': True, 'id': new_coin.id}), 201
     
     except Exception as e:
-        print(f"Error adding coin: {e}")
+        print(f"[ERROR] Adding coin: {e}")
         import traceback
         traceback.print_exc()
         db.session.rollback()
@@ -1004,7 +1045,7 @@ def upload_coin_image(id):
         return jsonify({'success': True})
     
     except Exception as e:
-        print(f"Error uploading image: {e}")
+        print(f"[ERROR] Uploading image: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
 if __name__ == '__main__':
@@ -1014,4 +1055,5 @@ if __name__ == '__main__':
     # Start price updater
     start_price_updater()
     
-    app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)
+    from waitress import serve
+    serve(app, host='0.0.0.0', port=5000, threads=8)
