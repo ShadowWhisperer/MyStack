@@ -102,6 +102,22 @@
             margin-bottom: 20px;
             text-align: center;
         }
+        .lockout-message {
+            background: #c0392b;
+            color: white;
+            padding: 14px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+        .lockout-message span {
+            font-size: 1.2em;
+        }
+        input:disabled, button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -109,6 +125,30 @@
         <div class="app-icon">🔒</div>
         <h2>MyStack</h2>
         
+        {% if lockout_remaining and lockout_remaining > 0 %}
+        <div class="lockout-message">
+            Too many failed attempts.<br>
+            Try again in <span id="countdown">{{ lockout_remaining }}</span>s
+        </div>
+        <script>
+            (function() {
+                let s = {{ lockout_remaining }};
+                const el = document.getElementById('countdown');
+                const inputs = document.querySelectorAll('input, button');
+                inputs.forEach(i => i.disabled = true);
+                const t = setInterval(function() {
+                    s--;
+                    if (s <= 0) {
+                        clearInterval(t);
+                        window.location.href = window.location.pathname;
+                    } else {
+                        el.textContent = s;
+                    }
+                }, 1000);
+            })();
+        </script>
+        {% endif %}
+
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 {% for message in messages %}
