@@ -144,7 +144,8 @@
 }
 
 #categoryDonutChart {
-    max-width: 90%;
+    max-width: 100%;
+    max-height: 100%;
 }
 
 .chart-title {
@@ -353,6 +354,25 @@ const chartConfig = {
             },
             tooltip: {
                 displayColors: false,  // Remove colored squares
+                enabled: false,
+                external: function(context) {
+                    let tooltipEl = document.getElementById('chartjs-tooltip');
+                    if (!tooltipEl) {
+                        tooltipEl = document.createElement('div');
+                        tooltipEl.id = 'chartjs-tooltip';
+                        tooltipEl.style.cssText = 'position:fixed;background:rgba(0,0,0,0.75);color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;pointer-events:none;z-index:9999;white-space:nowrap;transition:opacity 0.1s;';
+                        document.body.appendChild(tooltipEl);
+                    }
+                    const tooltipModel = context.tooltip;
+                    if (tooltipModel.opacity === 0) {
+                        tooltipEl.style.opacity = '0';
+                        return;
+                    }
+                    if (tooltipModel.body) {
+                        tooltipEl.innerHTML = tooltipModel.body.map(b => b.lines).join('<br>');
+                    }
+                    tooltipEl.style.opacity = '1';
+                },
                 callbacks: {
                     title: function() {
                         return ''; // Remove title (was showing "Worth" or "Ounces")
@@ -498,6 +518,21 @@ new Chart(metalsValueCtx, {
     }
 });
 
+// Track mouse position for external tooltip
+document.querySelectorAll('#valueChart, #metalsValueChart').forEach(canvas => {
+    canvas.addEventListener('mousemove', function(e) {
+        const tooltipEl = document.getElementById('chartjs-tooltip');
+        if (tooltipEl && tooltipEl.style.opacity !== '0') {
+            tooltipEl.style.left = (e.clientX + 12) + 'px';
+            tooltipEl.style.top = (e.clientY - 28) + 'px';
+        }
+    });
+    canvas.addEventListener('mouseleave', function() {
+        const tooltipEl = document.getElementById('chartjs-tooltip');
+        if (tooltipEl) tooltipEl.style.opacity = '0';
+    });
+});
+
 // Category Breakdown Donut Chart
 const categoryDonutCtx = document.getElementById('categoryDonutChart').getContext('2d');
 
@@ -535,7 +570,7 @@ new Chart(categoryDonutCtx, {
     options: {
         responsive: true,
         maintainAspectRatio: true,
-        aspectRatio: 2,
+        aspectRatio: 1,
         plugins: {
             legend: {
                 display: false  // Remove legend
